@@ -1,0 +1,19 @@
+{
+  "name": "aquwitytry2",
+  "version": "1.0.0",
+  "description": "helps you focus",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "delanoklee",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^40.1.0"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "dotenv": "^17.2.3"
+  }
+}

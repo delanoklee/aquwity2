@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'self'; script-src 'self'; style-src 'self'" />
+    <title>Acuity - Focus Tracker</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <div id="top-bar">
+        <button id="todo-btn" title="To-Do List">☑</button>
+        <input type="text" id="task-input" placeholder="What are you working on?" />
+        <button id="track-btn">Start</button>
+        <button id="expand-btn">History</button>
+        <div id="status-indicator"></div>
+        <img src="logo.png" id="logo" alt="Acuity Logo" />
+      </div>
+      <div id="history-panel" class="hidden">
+        <div id="history-list"></div>
+      </div>
+      <div id="todo-panel" class="hidden">
+        <div id="todo-list"></div>
+        <div id="todo-input-row">
+          <input type="text" id="todo-input" placeholder="Add a task..." />
+          <button id="todo-add-btn">+</button>
+        </div>
+      </div>
+    </div>
+    <script src="renderer.js"></script>
+  </body>
+</html>
