@@ -78,15 +78,6 @@ button {
   background: #da190b;
 }
 
-#expand-btn {
-  background: #2196F3;
-  color: white;
-}
-
-#expand-btn:hover {
-  background: #1976D2;
-}
-
 #status-indicator {
   width: 12px;
   height: 12px;
@@ -100,6 +91,11 @@ button {
   width: auto;
   margin-left: auto;
   -webkit-app-region: no-drag;
+  cursor: pointer;
+}
+
+#logo:hover {
+  opacity: 0.8;
 }
 
 #status-indicator.on-task {
@@ -112,11 +108,20 @@ button {
   box-shadow: 0 0 8px #f44336;
 }
 
+#status-indicator.observe {
+  background: #FF9800;
+  box-shadow: 0 0 8px #FF9800;
+}
+
 #history-panel {
   flex: 1;
   background: #1a1a2e;
   overflow-y: auto;
   padding: 12px;
+}
+
+#history-controls {
+  margin-bottom: 12px;
 }
 
 #history-panel.hidden {
@@ -151,6 +156,10 @@ button {
   border-left-color: #9C27B0;
 }
 
+.history-item.observation {
+  border-left-color: #FF9800;
+}
+
 .history-status {
   width: 10px;
   height: 10px;
@@ -170,8 +179,16 @@ button {
   background: #9C27B0;
 }
 
+.history-item.observation .history-status {
+  background: #FF9800;
+}
+
 .history-item.completed .history-reason {
   color: #CE93D8;
+}
+
+.history-item.observation .history-reason {
+  color: #FFB74D;
 }
 
 .history-time {
@@ -198,6 +215,25 @@ button {
   background: #4A6575;
 }
 
+/* Focus Button */
+#focus-btn {
+  font-size: 12px;
+  background: #C8B898;
+  color: #7A8B8C;
+  border-radius: 4px;
+  width: 60px;
+  height: 34px;
+  text-align: center;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#focus-btn:hover {
+  background: #B8A888;
+}
+
 /* To-Do Panel */
 #todo-panel {
   flex: 1;
@@ -210,6 +246,13 @@ button {
 
 #todo-panel.hidden {
   display: none;
+}
+
+#todo-header {
+  color: #5D7A8C;
+  font-size: 15px;
+  margin-bottom: 10px;
+  text-align: left;
 }
 
 #todo-input-row {
@@ -231,9 +274,16 @@ button {
   margin-top: 0;
 }
 
-#todo-input {
+#todo-input-wrapper {
   flex: 1;
-  padding: 8px 12px;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+#todo-input {
+  width: 100%;
+  padding: 8px 80px 8px 12px;
   border: none;
   border-radius: 4px;
   background: #D4C4A8;
@@ -245,6 +295,18 @@ button {
 
 #todo-input::placeholder {
   color: #7A8B8C;
+}
+
+#todo-hint {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9A8B7C;
+  font-size: 12px;
+  font-style: italic;
+  pointer-events: none;
+  opacity: 0.7;
 }
 
 #todo-add-btn {
@@ -277,6 +339,30 @@ button {
 .todo-text {
   flex: 1;
   font-size: 14px;
+  min-height: 1em;
+  cursor: text;
+}
+
+.todo-item-input {
+  flex: 1;
+  font-size: 14px;
+  font-family: 'American Typewriter', 'Courier New', Courier, monospace;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #3D5A6B;
+  padding: 0;
+}
+
+.todo-edit-input {
+  flex: 1;
+  font-size: 14px;
+  padding: 2px 6px;
+  border: 1px solid #3D5A6B;
+  border-radius: 4px;
+  background: #E8DCC8;
+  color: #3D5A6B;
+  outline: none;
 }
 
 .todo-delete {
@@ -294,15 +380,16 @@ button {
 
 
 .todo-drag-handle {
-  width: 16px;
-  height: 16px;
-  opacity: 0.5;
+  color: #7A8B8C;
+  font-size: 20px;
+  opacity: 0.6;
   cursor: grab;
   flex-shrink: 0;
+  user-select: none;
 }
 
 .todo-drag-handle:hover {
-  opacity: 0.8;
+  opacity: 1;
 }
 
 .todo-item.dragging {

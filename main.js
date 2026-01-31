@@ -1,7 +1,7 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const { app, BrowserWindow, desktopCapturer, ipcMain, screen, globalShortcut, Menu } = require('electron');
 const fs = require('fs');
-const path = require('path');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 // In-memory state
@@ -13,8 +13,11 @@ let screenshots = {
 let history = [];
 let trackingInterval = null;
 let mainWindow = null;
+let interventionWindow = null;
 let completedTasks = [];
 let completedTasksPath = null;
+let offTaskCount = 0;
+let focusEnabled = false;
 
 function loadCompletedTasks() {
   try {
@@ -134,6 +137,93 @@ Respond with JSON only, no markdown: {"onTask": true/false, "reason": "brief exp
   }
 }
 
+async function analyzeActivity() {
+  if (!process.env.GEMINI_API_KEY) {
+    return { activity: "API key not configured" };
+  }
+
+  const checkFocus = focusEnabled && currentTask && currentTask.trim();
+
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+    // Build the image parts array
+    const imageParts = [];
+
+    // Add previous screenshots
+    for (const base64 of screenshots.previous) {
+      imageParts.push({
+        inlineData: {
+          data: base64,
+          mimeType: "image/png"
+        }
+      });
+    }
+
+    // Add current screenshots
+    for (const base64 of screenshots.current) {
+      imageParts.push({
+        inlineData: {
+          data: base64,
+          mimeType: "image/png"
+        }
+      });
+    }
+
+    const numMonitors = screenshots.current.length;
+
+    let prompt;
+    if (checkFocus) {
+      prompt = `Analyze the screenshots and:
+1. Describe SPECIFICALLY what the user is doing (be granular, not just "using VS Code")
+2. Determine if they are working on their stated task: "${currentTask}"
+
+Examples of good granularity:
+- LinkedIn: 'Scrolling through feed reading posts' vs 'Viewing a specific person's profile'
+- VS Code: 'Writing a new function in main.js' vs 'Debugging with breakpoints'
+- Browser: 'Reading a technical article about React hooks' vs 'Shopping on Amazon'
+
+Look at window titles, visible text, cursor position, and UI elements.
+
+I'm showing you screenshots from all monitors. The first ${numMonitors} images are from the previous check (2 minutes ago), the next ${numMonitors} images are from the current check.
+
+Respond with JSON only, no markdown: {"activity": "specific granular description", "onTask": true/false}`;
+    } else {
+      prompt = `Analyze the screenshots and describe SPECIFICALLY what the user is doing.
+Be extremely granular - don't just say 'using LinkedIn' or 'in VS Code'.
+
+Examples of good granularity:
+- LinkedIn: 'Scrolling through feed reading posts' vs 'Viewing a specific person's profile'
+  vs 'Composing a connection request message' vs 'Reading/replying to DMs'
+- VS Code: 'Writing a new function in main.js' vs 'Debugging with breakpoints'
+  vs 'Reading documentation in a markdown file' vs 'Running terminal commands'
+- Browser: 'Reading a technical article about React hooks' vs 'Watching a YouTube tutorial'
+  vs 'Shopping on Amazon' vs 'Checking email inbox'
+
+Look at window titles, visible text, cursor position, and UI elements to determine
+the specific action, not just the application.
+
+I'm showing you screenshots from all monitors. The first ${numMonitors} images are from the previous check (2 minutes ago), the next ${numMonitors} images are from the current check.
+
+Respond with JSON only, no markdown: {"activity": "specific granular description of current activity"}`;
+    }
+
+    const result = await model.generateContent([prompt, ...imageParts]);
+    const response = await result.response;
+    const text = response.text();
+
+    // Parse JSON from response
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+    return { activity: "Could not parse response" };
+  } catch (error) {
+    console.error('Gemini API error:', error);
+    return { activity: `API error: ${error.message}` };
+  }
+}
+
 async function performCheck() {
   console.log('Performing check...');
 
@@ -146,16 +236,40 @@ async function performCheck() {
 
   // Only analyze if we have both sets (skip first check)
   if (screenshots.previous.length > 0) {
-    console.log('Analyzing with Gemini...');
-    const result = await analyzeWithGemini();
+    console.log('Analyzing activity...', focusEnabled ? '(focus enabled)' : '(observe only)');
+    const result = await analyzeActivity();
     console.log('Analysis result:', result);
+
+    const checkingFocus = focusEnabled && currentTask && currentTask.trim();
 
     const entry = {
       timestamp: new Date().toISOString(),
-      onTask: result.onTask,
-      reason: result.reason
+      type: 'observation',
+      activity: result.activity,
+      onTask: checkingFocus ? result.onTask : null
     };
     history.push(entry);
+
+    // Handle focus mode off-task intervention
+    if (checkingFocus) {
+      const isError = result.activity && (
+        result.activity.startsWith('API error:') ||
+        result.activity === 'API key not configured' ||
+        result.activity === 'Could not parse response'
+      );
+
+      if (result.onTask || isError) {
+        offTaskCount = 0;
+      } else {
+        offTaskCount++;
+        console.log('Off-task count:', offTaskCount);
+
+        // Trigger intervention popup after 2 consecutive off-task checks
+        if (offTaskCount >= 2) {
+          showInterventionWindow();
+        }
+      }
+    }
 
     // Send result to renderer
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -164,6 +278,19 @@ async function performCheck() {
   } else {
     console.log('Skipping analysis (need previous screenshots first)');
   }
+}
+
+function getCheckInterval() {
+  // 30 seconds when locked in, 3 minutes when not
+  return focusEnabled ? 30 * 1000 : 3 * 60 * 1000;
+}
+
+function updateTrackingInterval() {
+  if (!trackingInterval) return;
+
+  clearInterval(trackingInterval);
+  trackingInterval = setInterval(performCheck, getCheckInterval());
+  console.log(`Interval updated: ${focusEnabled ? '30 seconds' : '3 minutes'}`);
 }
 
 function startTracking() {
@@ -177,8 +304,9 @@ function startTracking() {
     console.log(`Initial capture: ${screens.length} screen(s)`);
   });
 
-  // Set up interval for 2 minutes
-  trackingInterval = setInterval(performCheck, 2 * 60 * 1000);
+  // Set up interval based on focus mode
+  trackingInterval = setInterval(performCheck, getCheckInterval());
+  console.log(`Interval set: ${focusEnabled ? '30 seconds' : '3 minutes'}`);
 }
 
 function stopTracking() {
@@ -205,6 +333,15 @@ ipcMain.on('stop-tracking', () => {
   stopTracking();
 });
 
+ipcMain.on('set-focus-enabled', (event, enabled) => {
+  focusEnabled = enabled;
+  if (!enabled) {
+    offTaskCount = 0; // Reset when disabling focus
+  }
+  updateTrackingInterval();
+  console.log('Focus enabled:', enabled);
+});
+
 ipcMain.on('resize-window', (event, height) => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     const primaryDisplay = screen.getPrimaryDisplay();
@@ -215,6 +352,73 @@ ipcMain.on('resize-window', (event, height) => {
 
 ipcMain.handle('get-completed-tasks', () => {
   return completedTasks;
+});
+
+ipcMain.handle('complete-todo', (event, todoText) => {
+  const completedTask = {
+    timestamp: new Date().toISOString(),
+    task: todoText,
+    type: 'completed',
+    source: 'todo'
+  };
+  completedTasks.push(completedTask);
+  saveCompletedTasks();
+  return completedTask;
+});
+
+function showInterventionWindow() {
+  // Don't create multiple intervention windows
+  if (interventionWindow && !interventionWindow.isDestroyed()) {
+    interventionWindow.focus();
+    return;
+  }
+
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width, height } = primaryDisplay.workAreaSize;
+
+  const winWidth = 400;
+  const winHeight = 200;
+
+  interventionWindow = new BrowserWindow({
+    width: winWidth,
+    height: winHeight,
+    x: Math.round((width - winWidth) / 2),
+    y: Math.round((height - winHeight) / 2),
+    frame: false,
+    modal: true,
+    parent: mainWindow,
+    alwaysOnTop: true,
+    resizable: false,
+    skipTaskbar: true,
+    webPreferences: {
+      preload: __dirname + '/intervention-preload.js',
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+
+  interventionWindow.loadFile('intervention.html');
+
+  // Send current task to intervention window once it's ready
+  interventionWindow.webContents.on('did-finish-load', () => {
+    interventionWindow.webContents.send('set-current-task', currentTask);
+  });
+}
+
+ipcMain.on('confirm-task', (event, confirmedTask) => {
+  currentTask = confirmedTask;
+  offTaskCount = 0;
+
+  // Sync the task back to the main window
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('task-updated', confirmedTask);
+  }
+
+  // Close intervention window
+  if (interventionWindow && !interventionWindow.isDestroyed()) {
+    interventionWindow.close();
+    interventionWindow = null;
+  }
 });
 
 app.whenReady().then(() => {

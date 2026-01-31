@@ -1,23 +1,67 @@
 const taskInput = document.getElementById('task-input');
 const trackBtn = document.getElementById('track-btn');
-const expandBtn = document.getElementById('expand-btn');
 const statusIndicator = document.getElementById('status-indicator');
 const historyPanel = document.getElementById('history-panel');
 const historyList = document.getElementById('history-list');
 const todoBtn = document.getElementById('todo-btn');
 const todoPanel = document.getElementById('todo-panel');
 const todoInput = document.getElementById('todo-input');
-const todoAddBtn = document.getElementById('todo-add-btn');
 const todoList = document.getElementById('todo-list');
+const todoHint = document.getElementById('todo-hint');
+const focusBtn = document.getElementById('focus-btn');
+const logo = document.getElementById('logo');
 
 let isTracking = false;
 let isExpanded = false;
 let isTodoOpen = false;
 let todos = [];
+let focusEnabled = false;
+
+// Align todo panel with task input dynamically
+function alignTodoPanel() {
+  const taskRect = taskInput.getBoundingClientRect();
+  const halfWidth = taskRect.width / 2;
+
+  todoPanel.style.paddingLeft = taskRect.left + 'px';
+
+  // Set max-width of todo content to half the task input width
+  const todoChildren = todoPanel.querySelectorAll('#todo-header, #todo-list, #todo-input-row');
+  todoChildren.forEach(child => {
+    child.style.maxWidth = halfWidth + 'px';
+  });
+}
+
+// Align on load and resize
+alignTodoPanel();
+window.addEventListener('resize', alignTodoPanel);
+
+// Close history/todo panels when clicking outside the app
+window.addEventListener('blur', () => {
+  const wasOpen = isExpanded || isTodoOpen;
+  if (isExpanded) {
+    isExpanded = false;
+    historyPanel.classList.add('hidden');
+  }
+  if (isTodoOpen) {
+    isTodoOpen = false;
+    todoPanel.classList.add('hidden');
+  }
+  if (wasOpen) {
+    window.acuity.resizeWindow(50);
+  }
+});
 
 // Auto-save task on input change
 taskInput.addEventListener('input', () => {
   window.acuity.setTask(taskInput.value);
+});
+
+// Focus button toggle
+focusBtn.addEventListener('click', () => {
+  focusEnabled = !focusEnabled;
+  focusBtn.classList.toggle('active', focusEnabled);
+  focusBtn.innerHTML = focusEnabled ? '&#128274;' : 'Lock in';
+  window.acuity.setFocusEnabled(focusEnabled);
 });
 
 // Start/Stop tracking
@@ -36,8 +80,8 @@ trackBtn.addEventListener('click', () => {
   }
 });
 
-// Expand/collapse history
-expandBtn.addEventListener('click', async () => {
+// Expand/collapse history (click logo)
+logo.addEventListener('click', async () => {
   isExpanded = !isExpanded;
 
   // Close to-do if open
@@ -60,13 +104,24 @@ expandBtn.addEventListener('click', async () => {
 
 // Listen for analysis results
 window.acuity.onAnalysisResult((result) => {
-  // Update status indicator
-  statusIndicator.className = result.onTask ? 'on-task' : 'off-task';
+  // Update status indicator based on focus mode and on-task status
+  if (result.onTask === null) {
+    // Not checking focus, just observing
+    statusIndicator.className = 'observe';
+  } else {
+    // Focus mode - show on-task or off-task
+    statusIndicator.className = result.onTask ? 'on-task' : 'off-task';
+  }
 
   // Add to history list if expanded
   if (isExpanded) {
     addHistoryItem(result);
   }
+});
+
+// Listen for task updates from intervention window
+window.acuity.onTaskUpdated((task) => {
+  taskInput.value = task;
 });
 
 // Listen for task completion (Ctrl+Shift+D hotkey)
@@ -113,7 +168,21 @@ async function refreshHistory() {
 function addHistoryItem(item) {
   const div = document.createElement('div');
   const isCompleted = item.type === 'completed';
-  div.className = `history-item ${isCompleted ? 'completed' : (item.onTask ? 'on-task' : 'off-task')}`;
+  const isObservation = item.type === 'observation';
+
+  if (isCompleted) {
+    div.className = 'history-item completed';
+  } else if (isObservation) {
+    // Observation entries: neutral if onTask is null, otherwise on-task/off-task
+    if (item.onTask === null) {
+      div.className = 'history-item observation';
+    } else {
+      div.className = `history-item ${item.onTask ? 'on-task' : 'off-task'}`;
+    }
+  } else {
+    // Legacy task mode entries
+    div.className = `history-item ${item.onTask ? 'on-task' : 'off-task'}`;
+  }
 
   const time = new Date(item.timestamp).toLocaleTimeString();
 
@@ -123,7 +192,14 @@ function addHistoryItem(item) {
       <span class="history-time">${time}</span>
       <span class="history-reason">✓ ${item.task}</span>
     `;
+  } else if (isObservation) {
+    div.innerHTML = `
+      <div class="history-status"></div>
+      <span class="history-time">${time}</span>
+      <span class="history-reason">${item.activity}</span>
+    `;
   } else {
+    // Legacy task mode entries
     div.innerHTML = `
       <div class="history-status"></div>
       <span class="history-time">${time}</span>
@@ -199,6 +275,7 @@ todoBtn.addEventListener('click', () => {
   if (isTodoOpen) {
     todoPanel.classList.remove('hidden');
     resizeTodoPanel();
+    todoInput.focus();
   } else {
     todoPanel.classList.add('hidden');
     if (!isExpanded) {
@@ -207,19 +284,28 @@ todoBtn.addEventListener('click', () => {
   }
 });
 
-// Add todo on button click
-todoAddBtn.addEventListener('click', addTodo);
-
 // Add todo on Enter key
 todoInput.addEventListener('keypress', (e) => {
   if (e.key === 'Enter') {
+    e.preventDefault();
+    todoInput.blur();
     addTodo();
+  }
+});
+
+
+// Show hint when typing in empty todo list
+todoInput.addEventListener('input', () => {
+  if (todoInput.value.length > 0 && todos.length === 0) {
+    todoHint.classList.add('visible');
+  } else {
+    todoHint.classList.remove('visible');
   }
 });
 
 function addTodo() {
   const text = todoInput.value.trim();
-  if (!text) return;
+  if (todos.length >= 19) return;
 
   const todo = {
     id: Date.now(),
@@ -227,10 +313,17 @@ function addTodo() {
   };
 
   todos.push(todo);
-  renderTodoItem(todo);
+  const newItem = renderTodoItem(todo);
+  todoList.appendChild(newItem);
   todoInput.value = '';
+  todoHint.classList.remove('visible');
   resizeTodoPanel();
-  todoInput.focus();
+
+  // Focus the new item's input synchronously to avoid RAF race conditions
+  const newInput = newItem.querySelector('.todo-item-input');
+  if (newInput) {
+    newInput.focus();
+  }
 }
 
 let draggedItem = null;
@@ -239,13 +332,53 @@ function renderTodoItem(todo) {
   const div = document.createElement('div');
   div.className = 'todo-item';
   div.dataset.id = todo.id;
-  div.draggable = true;
+  // div.draggable = true;  // Temporarily disabled for testing
 
   div.innerHTML = `
-    <img src="slider.png" class="todo-drag-handle" alt="drag" />
-    <span class="todo-text">${todo.text}</span>
+    <span class="todo-drag-handle">⠿</span>
+    <input type="text" class="todo-item-input" value="${todo.text}" />
     <button class="todo-delete">✕</button>
   `;
+
+  const input = div.querySelector('.todo-item-input');
+
+  // Update todo text on change
+  input.addEventListener('input', () => {
+    todo.text = input.value;
+  });
+
+  // Handle Enter and Backspace
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      // Create new item after this one
+      const newTodo = { id: Date.now(), text: '' };
+      const currentIndex = todos.findIndex(t => t.id === todo.id);
+      todos.splice(currentIndex + 1, 0, newTodo);
+      const newItem = renderTodoItem(newTodo);
+      div.after(newItem);
+      const newInput = newItem.querySelector('.todo-item-input');
+      resizeTodoPanel();
+      // Focus synchronously after resize
+      newInput.focus();
+      newInput.setSelectionRange(0, 0);
+    }
+    if (e.key === 'Backspace' && input.value === '') {
+      e.preventDefault();
+      const prevItem = div.previousElementSibling;
+      todos = todos.filter(t => t.id !== todo.id);
+      div.remove();
+      resizeTodoPanel();
+      if (prevItem && prevItem.classList.contains('todo-item')) {
+        const prevInput = prevItem.querySelector('.todo-item-input');
+        prevInput.focus();
+        prevInput.selectionStart = prevInput.value.length;
+        prevInput.selectionEnd = prevInput.value.length;
+      } else {
+        todoInput.focus();
+      }
+    }
+  });
 
   // Delete todo
   div.querySelector('.todo-delete').addEventListener('click', () => {
@@ -281,7 +414,6 @@ function renderTodoItem(todo) {
     }
   });
 
-  // Append to end (newest at bottom, just above input)
-  todoList.appendChild(div);
+  return div;
 }
 

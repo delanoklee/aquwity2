@@ -34,5 +34,17 @@ contextBridge.exposeInMainWorld('acuity', {
     });
   },
 
-  getCompletedTasks: () => ipcRenderer.invoke('get-completed-tasks')
+  getCompletedTasks: () => ipcRenderer.invoke('get-completed-tasks'),
+
+  completeTodo: (todoText) => ipcRenderer.invoke('complete-todo', todoText),
+
+  onTaskUpdated: (callback) => {
+    ipcRenderer.on('task-updated', (event, task) => {
+      callback(task);
+    });
+  },
+
+  setFocusEnabled: (enabled) => {
+    ipcRenderer.send('set-focus-enabled', enabled);
+  }
 });
