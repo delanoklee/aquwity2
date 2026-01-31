@@ -39,17 +39,19 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width } = primaryDisplay.workAreaSize;
+  const windowWidth = Math.round(width / 3);
+  const x = Math.round((width - windowWidth) / 2);
 
   mainWindow = new BrowserWindow({
-    width: width,
+    width: windowWidth,
     height: 50,
-    x: 0,
+    x: x,
     y: 0,
     frame: false,
     alwaysOnTop: false,
     resizable: false,
     skipTaskbar: true,
-    transparent: false,
+    transparent: true,
     webPreferences: {
       preload: __dirname + '/preload.js',
       contextIsolation: true,
@@ -281,8 +283,8 @@ async function performCheck() {
 }
 
 function getCheckInterval() {
-  // 30 seconds when locked in, 3 minutes when not
-  return focusEnabled ? 30 * 1000 : 3 * 60 * 1000;
+  // 7 seconds when locked in, 3 minutes when not
+  return focusEnabled ? 7 * 1000 : 3 * 60 * 1000;
 }
 
 function updateTrackingInterval() {
@@ -290,7 +292,7 @@ function updateTrackingInterval() {
 
   clearInterval(trackingInterval);
   trackingInterval = setInterval(performCheck, getCheckInterval());
-  console.log(`Interval updated: ${focusEnabled ? '30 seconds' : '3 minutes'}`);
+  console.log(`Interval updated: ${focusEnabled ? '7 seconds' : '3 minutes'}`);
 }
 
 function startTracking() {
@@ -306,7 +308,7 @@ function startTracking() {
 
   // Set up interval based on focus mode
   trackingInterval = setInterval(performCheck, getCheckInterval());
-  console.log(`Interval set: ${focusEnabled ? '30 seconds' : '3 minutes'}`);
+  console.log(`Interval set: ${focusEnabled ? '7 seconds' : '3 minutes'}`);
 }
 
 function stopTracking() {
@@ -346,7 +348,9 @@ ipcMain.on('resize-window', (event, height) => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     const primaryDisplay = screen.getPrimaryDisplay();
     const { width } = primaryDisplay.workAreaSize;
-    mainWindow.setBounds({ x: 0, y: 0, width: width, height: height });
+    const windowWidth = Math.round(width / 3);
+    const x = Math.round((width - windowWidth) / 2);
+    mainWindow.setBounds({ x: x, y: 0, width: windowWidth, height: height });
   }
 });
 

@@ -10,34 +10,85 @@ const todoList = document.getElementById('todo-list');
 const todoHint = document.getElementById('todo-hint');
 const focusBtn = document.getElementById('focus-btn');
 const logo = document.getElementById('logo');
+const reportBtn = document.getElementById('report-btn');
+const reportPanel = document.getElementById('report-panel');
+const reportStats = document.getElementById('report-stats');
+const goalBtn = document.getElementById('goal-btn');
+const goalBar = document.getElementById('goal-bar');
+const goalDisplay = document.getElementById('goal-display');
+const goalInput = document.getElementById('goal-input');
+const goalInputRow = document.getElementById('goal-input-row');
 
 let isTracking = false;
 let isExpanded = false;
 let isTodoOpen = false;
+let isReportOpen = false;
 let todos = [];
 let focusEnabled = false;
+let currentGoal = localStorage.getItem('acuity-goal') || '';
 
-// Align todo panel with task input dynamically
-function alignTodoPanel() {
-  const taskRect = taskInput.getBoundingClientRect();
-  const halfWidth = taskRect.width / 2;
-
-  todoPanel.style.paddingLeft = taskRect.left + 'px';
-
-  // Set max-width of todo content to half the task input width
-  const todoChildren = todoPanel.querySelectorAll('#todo-header, #todo-list, #todo-input-row');
-  todoChildren.forEach(child => {
-    child.style.maxWidth = halfWidth + 'px';
-  });
+// Calculate base window height (top bar + goal bar if visible)
+function getBaseHeight() {
+  const topBarHeight = 50;
+  const goalBarHeight = goalBar.classList.contains('hidden') ? 0 : 30;
+  return topBarHeight + goalBarHeight;
 }
 
-// Align on load and resize
-alignTodoPanel();
-window.addEventListener('resize', alignTodoPanel);
+// Initialize goal display
+if (currentGoal) {
+  goalDisplay.textContent = currentGoal;
+  goalBar.classList.remove('hidden');
+  goalBtn.classList.add('has-goal');
+  // Resize window to fit goal bar
+  window.acuity.resizeWindow(getBaseHeight());
+}
 
-// Close history/todo panels when clicking outside the app
+// Goal button click - show input or edit existing goal
+goalBtn.addEventListener('click', () => {
+  // Toggle goal input visibility
+  const isVisible = !goalInputRow.classList.contains('hidden');
+  if (isVisible) {
+    goalInputRow.classList.add('hidden');
+  } else {
+    goalInputRow.classList.remove('hidden');
+    goalInput.value = currentGoal;
+    goalInput.focus();
+    goalInput.select();
+  }
+});
+
+// Goal input - save on Enter
+goalInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    saveGoal();
+  }
+});
+
+// Goal input - save on blur
+goalInput.addEventListener('blur', () => {
+  saveGoal();
+});
+
+function saveGoal() {
+  currentGoal = goalInput.value.trim();
+  localStorage.setItem('acuity-goal', currentGoal);
+
+  goalInputRow.classList.add('hidden');
+
+  if (currentGoal) {
+    goalDisplay.textContent = currentGoal;
+    goalBar.classList.remove('hidden');
+    goalBtn.classList.add('has-goal');
+  } else {
+    goalBar.classList.add('hidden');
+    goalBtn.classList.remove('has-goal');
+  }
+}
+
+// Close history/todo/report panels when clicking outside the app
 window.addEventListener('blur', () => {
-  const wasOpen = isExpanded || isTodoOpen;
+  const wasOpen = isExpanded || isTodoOpen || isReportOpen;
   if (isExpanded) {
     isExpanded = false;
     historyPanel.classList.add('hidden');
@@ -46,8 +97,12 @@ window.addEventListener('blur', () => {
     isTodoOpen = false;
     todoPanel.classList.add('hidden');
   }
+  if (isReportOpen) {
+    isReportOpen = false;
+    reportPanel.classList.add('hidden');
+  }
   if (wasOpen) {
-    window.acuity.resizeWindow(50);
+    window.acuity.resizeWindow(getBaseHeight());
   }
 });
 
@@ -62,6 +117,16 @@ focusBtn.addEventListener('click', () => {
   focusBtn.classList.toggle('active', focusEnabled);
   focusBtn.innerHTML = focusEnabled ? '&#128274;' : 'Lock in';
   window.acuity.setFocusEnabled(focusEnabled);
+
+  // Hide todo button when focus mode is on
+  todoBtn.style.display = focusEnabled ? 'none' : '';
+
+  // Close todo panel if open when entering focus mode
+  if (focusEnabled && isTodoOpen) {
+    todoPanel.classList.add('hidden');
+    isTodoOpen = false;
+    resizeTodoPanel();
+  }
 });
 
 // Start/Stop tracking
@@ -84,10 +149,14 @@ trackBtn.addEventListener('click', () => {
 logo.addEventListener('click', async () => {
   isExpanded = !isExpanded;
 
-  // Close to-do if open
+  // Close to-do and report if open
   if (isExpanded && isTodoOpen) {
     isTodoOpen = false;
     todoPanel.classList.add('hidden');
+  }
+  if (isExpanded && isReportOpen) {
+    isReportOpen = false;
+    reportPanel.classList.add('hidden');
   }
 
   if (isExpanded) {
@@ -96,11 +165,61 @@ logo.addEventListener('click', async () => {
     await refreshHistory();
   } else {
     historyPanel.classList.add('hidden');
-    if (!isTodoOpen) {
-      window.acuity.resizeWindow(50);
+    if (!isTodoOpen && !isReportOpen) {
+      window.acuity.resizeWindow(getBaseHeight());
     }
   }
 });
+
+// Report button toggle
+reportBtn.addEventListener('click', async () => {
+  isReportOpen = !isReportOpen;
+
+  // Close history and to-do if open
+  if (isReportOpen && isExpanded) {
+    isExpanded = false;
+    historyPanel.classList.add('hidden');
+  }
+  if (isReportOpen && isTodoOpen) {
+    isTodoOpen = false;
+    todoPanel.classList.add('hidden');
+  }
+
+  if (isReportOpen) {
+    reportPanel.classList.remove('hidden');
+    window.acuity.resizeWindow(200);
+    await refreshReport();
+  } else {
+    reportPanel.classList.add('hidden');
+    if (!isExpanded && !isTodoOpen) {
+      window.acuity.resizeWindow(getBaseHeight());
+    }
+  }
+});
+
+async function refreshReport() {
+  const history = await window.acuity.getHistory();
+  const focusObservations = history.filter(
+    item => item.type === 'observation' && item.onTask !== null
+  );
+  const onTaskCount = focusObservations.filter(i => i.onTask === true).length;
+  const offTaskCount = focusObservations.filter(i => i.onTask === false).length;
+  const total = focusObservations.length;
+  const onTaskPct = total > 0 ? (onTaskCount / total * 100).toFixed(1) : '0';
+  const offTaskPct = total > 0 ? (offTaskCount / total * 100).toFixed(1) : '0';
+
+  reportStats.innerHTML = `
+    <div class="report-bar-container">
+      <div style="width: ${onTaskPct}%; background: #4CAF50; height: 100%;"></div>
+      <div style="width: ${offTaskPct}%; background: #f44336; height: 100%;"></div>
+    </div>
+    <div class="report-labels">
+      <span class="report-label on-task">On Task: ${onTaskPct}%</span>
+      <span class="report-label off-task">Off Task: ${offTaskPct}%</span>
+    </div>
+    <p class="report-note">Based on ${total} check${total !== 1 ? 's' : ''} while locked in</p>
+  `;
+}
 
 // Listen for analysis results
 window.acuity.onAnalysisResult((result) => {
@@ -219,13 +338,14 @@ function resizeTodoPanel() {
 
   const maxWindowHeight = 500;
   const topBarHeight = 50;
+  const goalBarHeight = goalBar.classList.contains('hidden') ? 0 : 30;
   const inputRowHeight = 50;
   const panelPadding = 24;
   const itemGap = 8;
   const baseItemHeight = 42;
 
   const itemCount = todos.length;
-  const baseHeight = topBarHeight + inputRowHeight + panelPadding;
+  const baseHeight = topBarHeight + goalBarHeight + inputRowHeight + panelPadding;
   const itemsHeight = itemCount > 0 ? (itemCount * baseItemHeight) + ((itemCount - 1) * itemGap) : 0;
   const totalHeight = baseHeight + itemsHeight;
 
@@ -266,10 +386,14 @@ function resizeTodoPanel() {
 todoBtn.addEventListener('click', () => {
   isTodoOpen = !isTodoOpen;
 
-  // Close history if open
+  // Close history and report if open
   if (isTodoOpen && isExpanded) {
     isExpanded = false;
     historyPanel.classList.add('hidden');
+  }
+  if (isTodoOpen && isReportOpen) {
+    isReportOpen = false;
+    reportPanel.classList.add('hidden');
   }
 
   if (isTodoOpen) {
@@ -278,8 +402,8 @@ todoBtn.addEventListener('click', () => {
     todoInput.focus();
   } else {
     todoPanel.classList.add('hidden');
-    if (!isExpanded) {
-      window.acuity.resizeWindow(50);
+    if (!isExpanded && !isReportOpen) {
+      window.acuity.resizeWindow(getBaseHeight());
     }
   }
 });

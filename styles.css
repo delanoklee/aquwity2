@@ -6,7 +6,7 @@
 
 body {
   font-family: 'American Typewriter', 'Courier New', Courier, monospace;
-  background: #1a1a2e;
+  background: transparent;
   color: #eee;
   overflow: hidden;
 }
@@ -16,6 +16,26 @@ body {
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
+  border-radius: 0 0 8px 8px;
+  background: #1a1a2e;
+}
+
+#top-section {
+  flex-shrink: 0;
+}
+
+#goal-bar {
+  background: #7B5D8C;
+  color: white;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: bold;
+  text-align: center;
+  -webkit-app-region: drag;
+}
+
+#goal-bar.hidden {
+  display: none;
 }
 
 #top-bar {
@@ -118,9 +138,12 @@ button {
   background: #1a1a2e;
   overflow-y: auto;
   padding: 12px;
+  border-radius: 0 0 8px 8px;
 }
 
 #history-controls {
+  display: flex;
+  gap: 8px;
   margin-bottom: 12px;
 }
 
@@ -203,6 +226,26 @@ button {
   flex: 1;
 }
 
+/* Goal Button */
+#goal-btn {
+  background: #5D7A8C;
+  color: white;
+  font-size: 16px;
+  padding: 6px 10px;
+}
+
+#goal-btn:hover {
+  background: #4A6575;
+}
+
+#goal-btn.has-goal {
+  background: #7B5D8C;
+}
+
+#goal-btn.has-goal:hover {
+  background: #6A4A75;
+}
+
 /* To-Do Button */
 #todo-btn {
   background: #5D7A8C;
@@ -217,21 +260,23 @@ button {
 
 /* Focus Button */
 #focus-btn {
-  font-size: 12px;
-  background: #C8B898;
-  color: #7A8B8C;
+  font-size: 13px;
+  background: #5D7A8C;
+  color: white;
   border-radius: 4px;
-  width: 60px;
-  height: 34px;
-  text-align: center;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: 8px 16px;
 }
 
 #focus-btn:hover {
-  background: #B8A888;
+  background: #4A6575;
+}
+
+#focus-btn.active {
+  background: #FF9800;
+}
+
+#focus-btn.active:hover {
+  background: #F57C00;
 }
 
 /* To-Do Panel */
@@ -242,10 +287,38 @@ button {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  border-radius: 0 0 8px 8px;
 }
 
 #todo-panel.hidden {
   display: none;
+}
+
+/* Goal Input Row */
+#goal-input-row {
+  display: flex;
+  padding: 8px 12px;
+  background: #E8DCC8;
+}
+
+#goal-input-row.hidden {
+  display: none;
+}
+
+#goal-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  background: #D4C4A8;
+  color: #3D5A6B;
+  font-family: 'American Typewriter', 'Courier New', Courier, monospace;
+  font-size: 14px;
+  outline: none;
+}
+
+#goal-input::placeholder {
+  color: #7A8B8C;
 }
 
 #todo-header {
@@ -400,3 +473,84 @@ button {
 .todo-item.dragging .todo-drag-handle {
   cursor: grabbing;
 }
+
+/* Report Button */
+#report-btn {
+  background: #5D7A8C;
+  color: white;
+  font-size: 12px;
+  padding: 6px 12px;
+}
+
+#report-btn:hover {
+  background: #4A6575;
+}
+
+/* Report Panel */
+#report-panel {
+  flex: 1;
+  background: #1a1a2e;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border-radius: 0 0 8px 8px;
+}
+
+#report-panel.hidden {
+  display: none;
+}
+
+#report-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+#report-header {
+  color: #eee;
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+#report-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.report-bar-container {
+  width: 100%;
+  height: 24px;
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+}
+
+.report-labels {
+  display: flex;
+  justify-content: space-between;
+}
+
+.report-label {
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.report-label.on-task {
+  color: #4CAF50;
+}
+
+.report-label.off-task {
+  color: #f44336;
+}
+
+.report-note {
+  font-size: 11px;
+  color: #888;
+  margin-top: 8px;
+  font-style: italic;
+}
+

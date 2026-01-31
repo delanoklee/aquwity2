@@ -9,16 +9,26 @@
   </head>
   <body>
     <div id="app">
-      <div id="top-bar">
-        <button id="todo-btn" title="To-Do List">☑</button>
-        <button id="focus-btn" title="Enable focus mode to get nudged when off-task">Lock in</button>
-        <input type="text" id="task-input" placeholder="What are you working on?" />
-        <div id="status-indicator"></div>
-        <img src="logo.png" id="logo" alt="Acuity Logo" title="Show/hide history" />
+      <div id="top-section">
+        <div id="goal-bar" class="hidden">
+          <span id="goal-display"></span>
+        </div>
+        <div id="goal-input-row" class="hidden">
+          <input type="text" id="goal-input" placeholder="What's your main goal?" />
+        </div>
+        <div id="top-bar">
+          <button id="goal-btn" title="Set your goal">🎯</button>
+          <button id="todo-btn" title="To-Do List">☑</button>
+          <input type="text" id="task-input" placeholder="What are you working on?" />
+          <div id="status-indicator"></div>
+          <button id="report-btn" title="View focus report">Report</button>
+          <img src="logo.png" id="logo" alt="Acuity Logo" title="Show/hide history" />
+        </div>
       </div>
       <div id="history-panel" class="hidden">
         <div id="history-controls">
           <button id="track-btn">Start</button>
+          <button id="focus-btn" title="Enable focus mode to get nudged when off-task">Lock in</button>
         </div>
         <div id="history-list"></div>
       </div>
@@ -30,6 +40,12 @@
             <input type="text" id="todo-input" placeholder="Add a task..." />
             <span id="todo-hint">press enter</span>
           </div>
+        </div>
+      </div>
+      <div id="report-panel" class="hidden">
+        <div id="report-content">
+          <p id="report-header">Focus Report</p>
+          <div id="report-stats"></div>
         </div>
       </div>
     </div>
