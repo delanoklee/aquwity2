@@ -46,5 +46,9 @@ contextBridge.exposeInMainWorld('acuity', {
 
   setFocusEnabled: (enabled) => {
     ipcRenderer.send('set-focus-enabled', enabled);
+  },
+
+  categorizeActivities: (activities) => {
+    return ipcRenderer.invoke('categorize-activities', activities);
   }
 });

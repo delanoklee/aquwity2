@@ -1,28 +1,37 @@
 const taskInput = document.getElementById('task-input');
+const taskInputWrapper = document.getElementById('task-input-wrapper');
+const topBar = document.getElementById('top-bar');
 const trackBtn = document.getElementById('track-btn');
-const statusIndicator = document.getElementById('status-indicator');
 const historyPanel = document.getElementById('history-panel');
 const historyList = document.getElementById('history-list');
-const todoBtn = document.getElementById('todo-btn');
 const todoPanel = document.getElementById('todo-panel');
-const todoInput = document.getElementById('todo-input');
 const todoList = document.getElementById('todo-list');
-const todoHint = document.getElementById('todo-hint');
+const taskHint = document.getElementById('task-hint');
 const focusBtn = document.getElementById('focus-btn');
 const logo = document.getElementById('logo');
+const logoDropdown = document.getElementById('logo-dropdown');
+const historyBtn = document.getElementById('history-btn');
 const reportBtn = document.getElementById('report-btn');
 const reportPanel = document.getElementById('report-panel');
 const reportStats = document.getElementById('report-stats');
-const goalBtn = document.getElementById('goal-btn');
 const goalBar = document.getElementById('goal-bar');
 const goalDisplay = document.getElementById('goal-display');
 const goalInput = document.getElementById('goal-input');
-const goalInputRow = document.getElementById('goal-input-row');
+const goalBtn = document.getElementById('goal-btn');
+const goalPanel = document.getElementById('goal-panel');
+const goalPanelInput = document.getElementById('goal-panel-input');
+const goalSaveBtn = document.getElementById('goal-save-btn');
+const reportRefreshBtn = document.getElementById('report-refresh-btn');
+const reportChart = document.getElementById('report-chart');
+const lockedinText = document.getElementById('lockedin-text');
+const lockedinHint = document.getElementById('lockedin-hint');
 
 let isTracking = false;
+let isLockedIn = false;
 let isExpanded = false;
-let isTodoOpen = false;
 let isReportOpen = false;
+let isGoalPanelOpen = false;
+let isLogoDropdownOpen = false;
 let todos = [];
 let focusEnabled = false;
 let currentGoal = localStorage.getItem('acuity-goal') || '';
@@ -34,81 +43,201 @@ function getBaseHeight() {
   return topBarHeight + goalBarHeight;
 }
 
-// Initialize goal display
+// Initialize - always show goal bar
+goalBar.classList.remove('hidden');
 if (currentGoal) {
+  // Show locked state
+  goalInput.classList.add('hidden');
+  goalDisplay.classList.remove('hidden');
   goalDisplay.textContent = currentGoal;
-  goalBar.classList.remove('hidden');
-  goalBtn.classList.add('has-goal');
-  // Resize window to fit goal bar
-  window.acuity.resizeWindow(getBaseHeight());
+  goalDisplay.title = 'go to settings to edit goal';
+} else {
+  // Show input state
+  goalInput.classList.remove('hidden');
+  goalDisplay.classList.add('hidden');
 }
+// Resize window to fit goal bar
+window.acuity.resizeWindow(getBaseHeight());
 
-// Goal button click - show input or edit existing goal
-goalBtn.addEventListener('click', () => {
-  // Toggle goal input visibility
-  const isVisible = !goalInputRow.classList.contains('hidden');
-  if (isVisible) {
-    goalInputRow.classList.add('hidden');
-  } else {
-    goalInputRow.classList.remove('hidden');
-    goalInput.value = currentGoal;
-    goalInput.focus();
-    goalInput.select();
-  }
-});
-
-// Goal input - save on Enter
-goalInput.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') {
+// Goal input - lock in on Enter
+goalInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && goalInput.value.trim()) {
     e.preventDefault();
-    saveGoal();
+    lockInGoal(goalInput.value.trim());
   }
 });
 
-// Goal input - save on blur
-goalInput.addEventListener('blur', () => {
-  saveGoal();
-});
-
-function saveGoal() {
-  currentGoal = goalInput.value.trim();
+function lockInGoal(text) {
+  currentGoal = text;
   localStorage.setItem('acuity-goal', currentGoal);
-
-  goalInputRow.classList.add('hidden');
-
-  if (currentGoal) {
-    goalDisplay.textContent = currentGoal;
-    goalBar.classList.remove('hidden');
-    goalBtn.classList.add('has-goal');
-  } else {
-    goalBar.classList.add('hidden');
-    goalBtn.classList.remove('has-goal');
-  }
+  goalInput.classList.add('hidden');
+  goalDisplay.classList.remove('hidden');
+  goalDisplay.textContent = currentGoal;
+  goalDisplay.title = 'go to settings to edit goal';
 }
 
-// Close history/todo/report panels when clicking outside the app
-window.addEventListener('blur', () => {
-  const wasOpen = isExpanded || isTodoOpen || isReportOpen;
+// Goal button in dropdown - open goal panel
+goalBtn.addEventListener('click', () => {
+  // Close dropdown
+  isLogoDropdownOpen = false;
+  logoDropdown.classList.add('hidden');
+
+  // Close other panels
   if (isExpanded) {
     isExpanded = false;
     historyPanel.classList.add('hidden');
   }
-  if (isTodoOpen) {
-    isTodoOpen = false;
+  if (isReportOpen) {
+    reportContentObserver.disconnect();
+    isReportOpen = false;
+    reportPanel.classList.add('hidden');
+  }
+  todoPanel.classList.add('hidden');
+
+  // Open goal panel
+  isGoalPanelOpen = true;
+  goalPanel.classList.remove('hidden');
+  goalPanelInput.value = currentGoal;
+  goalPanelInput.focus();
+  window.acuity.resizeWindow(getBaseHeight() + 120);
+});
+
+// Goal panel save button
+goalSaveBtn.addEventListener('click', () => {
+  const newGoal = goalPanelInput.value.trim();
+  if (newGoal) {
+    lockInGoal(newGoal);
+  }
+  isGoalPanelOpen = false;
+  goalPanel.classList.add('hidden');
+  updateTodoVisibility();
+});
+
+// Goal panel input - save on Enter
+goalPanelInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    goalSaveBtn.click();
+  }
+});
+
+// Update todo panel visibility based on lock-in state and todo count
+function updateTodoVisibility() {
+  if (!isLockedIn && todos.length > 0) {
+    todoPanel.classList.remove('hidden');
+    resizeTodoPanel();
+  } else {
     todoPanel.classList.add('hidden');
+    window.acuity.resizeWindow(getBaseHeight());
+  }
+}
+
+// Close history/report/goal panels and dropdown when clicking outside the app
+// Note: todo panel stays visible based on lock-in state and todo count
+window.addEventListener('blur', () => {
+  const wasOpen = isExpanded || isReportOpen || isGoalPanelOpen || isLogoDropdownOpen;
+  if (isExpanded) {
+    isExpanded = false;
+    historyPanel.classList.add('hidden');
   }
   if (isReportOpen) {
     isReportOpen = false;
     reportPanel.classList.add('hidden');
   }
+  if (isGoalPanelOpen) {
+    isGoalPanelOpen = false;
+    goalPanel.classList.add('hidden');
+  }
+  if (isLogoDropdownOpen) {
+    isLogoDropdownOpen = false;
+    logoDropdown.classList.add('hidden');
+  }
   if (wasOpen) {
-    window.acuity.resizeWindow(getBaseHeight());
+    // Resize to show todos if applicable, otherwise base height
+    updateTodoVisibility();
   }
 });
 
-// Auto-save task on input change
+// Auto-save task on input change and show/hide hint
 taskInput.addEventListener('input', () => {
   window.acuity.setTask(taskInput.value);
+  // Show hint when there's text, hide when empty
+  if (taskInput.value.trim()) {
+    taskHint.classList.remove('hidden');
+  } else {
+    taskHint.classList.add('hidden');
+  }
+});
+
+// Show hint if there's text when focusing, and close dropdown
+taskInput.addEventListener('focus', () => {
+  if (taskInput.value.trim()) {
+    taskHint.classList.remove('hidden');
+  }
+  if (isLogoDropdownOpen) {
+    isLogoDropdownOpen = false;
+    logoDropdown.classList.add('hidden');
+    updateTodoVisibility();
+  }
+});
+
+// Hide hint when task input loses focus
+taskInput.addEventListener('blur', () => {
+  taskHint.classList.add('hidden');
+});
+
+// Lock in task on Enter key, add to todo on Shift+Enter
+taskInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    if (e.shiftKey) {
+      // Shift+Enter: Add to todo list (allow empty items)
+      e.preventDefault();
+      const text = taskInput.value.trim();
+      if (todos.length < 19) {
+        const todo = { id: Date.now(), text: text };
+        todos.unshift(todo);
+        const newItem = renderTodoItem(todo);
+        todoList.insertBefore(newItem, todoList.firstChild);
+        updateTodoVisibility();
+        // Focus the new item's input
+        const newInput = newItem.querySelector('.todo-item-input');
+        if (newInput) {
+          newInput.focus();
+        }
+      }
+      taskInput.value = '';
+      taskHint.classList.add('hidden');
+    } else if (taskInput.value.trim()) {
+      // Enter: Lock in mode (existing behavior)
+      const task = taskInput.value.trim();
+      window.acuity.setTask(task);
+      isLockedIn = true;
+      lockedinText.textContent = task;
+      taskInputWrapper.classList.add('hidden');
+      lockedinText.classList.remove('hidden');
+      lockedinHint.classList.remove('hidden');
+      taskHint.classList.add('hidden');
+      topBar.classList.add('locked-in');
+      goalBar.classList.add('locked-in');
+
+      // Hide todo panel when locked in
+      updateTodoVisibility();
+    }
+  }
+});
+
+// Click locked-in text to edit
+lockedinText.addEventListener('click', () => {
+  isLockedIn = false;
+  lockedinText.classList.add('hidden');
+  lockedinHint.classList.add('hidden');
+  taskInputWrapper.classList.remove('hidden');
+  topBar.classList.remove('locked-in');
+  goalBar.classList.remove('locked-in');
+  taskInput.focus();
+
+  // Show todos if any exist
+  updateTodoVisibility();
 });
 
 // Focus button toggle
@@ -117,16 +246,6 @@ focusBtn.addEventListener('click', () => {
   focusBtn.classList.toggle('active', focusEnabled);
   focusBtn.innerHTML = focusEnabled ? '&#128274;' : 'Lock in';
   window.acuity.setFocusEnabled(focusEnabled);
-
-  // Hide todo button when focus mode is on
-  todoBtn.style.display = focusEnabled ? 'none' : '';
-
-  // Close todo panel if open when entering focus mode
-  if (focusEnabled && isTodoOpen) {
-    todoPanel.classList.add('hidden');
-    isTodoOpen = false;
-    resizeTodoPanel();
-  }
 });
 
 // Start/Stop tracking
@@ -141,60 +260,97 @@ trackBtn.addEventListener('click', () => {
     window.acuity.stopTracking();
     trackBtn.textContent = 'Start';
     trackBtn.classList.remove('tracking');
-    statusIndicator.className = '';
   }
 });
 
-// Expand/collapse history (click logo)
-logo.addEventListener('click', async () => {
-  isExpanded = !isExpanded;
+// Toggle logo dropdown
+logo.addEventListener('click', () => {
+  // Close other panels if open
+  if (isExpanded) {
+    isExpanded = false;
+    historyPanel.classList.add('hidden');
+  }
+  if (isReportOpen) {
+    reportContentObserver.disconnect();
+    isReportOpen = false;
+    reportPanel.classList.add('hidden');
+  }
+  if (isGoalPanelOpen) {
+    isGoalPanelOpen = false;
+    goalPanel.classList.add('hidden');
+  }
 
-  // Close to-do and report if open
-  if (isExpanded && isTodoOpen) {
-    isTodoOpen = false;
+  // Hide todos when opening dropdown
+  if (!isLogoDropdownOpen) {
     todoPanel.classList.add('hidden');
   }
-  if (isExpanded && isReportOpen) {
+
+  isLogoDropdownOpen = !isLogoDropdownOpen;
+  if (isLogoDropdownOpen) {
+    logoDropdown.classList.remove('hidden');
+    window.acuity.resizeWindow(getBaseHeight() + 150);
+  } else {
+    logoDropdown.classList.add('hidden');
+    updateTodoVisibility();
+  }
+});
+
+// History button
+historyBtn.addEventListener('click', async () => {
+  // Close dropdown
+  isLogoDropdownOpen = false;
+  logoDropdown.classList.add('hidden');
+
+  // Close report if open
+  if (isReportOpen) {
+    reportContentObserver.disconnect();
     isReportOpen = false;
     reportPanel.classList.add('hidden');
   }
 
-  if (isExpanded) {
-    historyPanel.classList.remove('hidden');
-    window.acuity.resizeWindow(350);
-    await refreshHistory();
-  } else {
-    historyPanel.classList.add('hidden');
-    if (!isTodoOpen && !isReportOpen) {
-      window.acuity.resizeWindow(getBaseHeight());
-    }
+  // Close goal panel if open
+  if (isGoalPanelOpen) {
+    isGoalPanelOpen = false;
+    goalPanel.classList.add('hidden');
   }
+
+  // Hide todos when showing history
+  todoPanel.classList.add('hidden');
+
+  // Open history panel
+  isExpanded = true;
+  historyPanel.classList.remove('hidden');
+  window.acuity.resizeWindow(350);
+  await refreshHistory();
 });
 
-// Report button toggle
+// Report button
 reportBtn.addEventListener('click', async () => {
-  isReportOpen = !isReportOpen;
+  // Close dropdown
+  isLogoDropdownOpen = false;
+  logoDropdown.classList.add('hidden');
 
-  // Close history and to-do if open
-  if (isReportOpen && isExpanded) {
+  // Close history if open
+  if (isExpanded) {
     isExpanded = false;
     historyPanel.classList.add('hidden');
   }
-  if (isReportOpen && isTodoOpen) {
-    isTodoOpen = false;
-    todoPanel.classList.add('hidden');
+
+  // Close goal panel if open
+  if (isGoalPanelOpen) {
+    isGoalPanelOpen = false;
+    goalPanel.classList.add('hidden');
   }
 
-  if (isReportOpen) {
-    reportPanel.classList.remove('hidden');
-    window.acuity.resizeWindow(200);
-    await refreshReport();
-  } else {
-    reportPanel.classList.add('hidden');
-    if (!isExpanded && !isTodoOpen) {
-      window.acuity.resizeWindow(getBaseHeight());
-    }
-  }
+  // Hide todos when showing report
+  todoPanel.classList.add('hidden');
+
+  // Open report panel
+  isReportOpen = true;
+  reportPanel.classList.remove('hidden');
+  reportContentObserver.observe(document.getElementById('report-content'));
+  await refreshReport();
+  resizeReportPanel();
 });
 
 async function refreshReport() {
@@ -202,16 +358,25 @@ async function refreshReport() {
   const focusObservations = history.filter(
     item => item.type === 'observation' && item.onTask !== null
   );
+  const total = focusObservations.length;
+
+  if (total === 0) {
+    reportStats.innerHTML = `
+      <p class="report-empty">No focus data yet.</p>
+      <p class="report-empty-hint">Click Start, then Lock in to begin tracking your focus. Your report will build as you work.</p>
+    `;
+    return;
+  }
+
   const onTaskCount = focusObservations.filter(i => i.onTask === true).length;
   const offTaskCount = focusObservations.filter(i => i.onTask === false).length;
-  const total = focusObservations.length;
-  const onTaskPct = total > 0 ? (onTaskCount / total * 100).toFixed(1) : '0';
-  const offTaskPct = total > 0 ? (offTaskCount / total * 100).toFixed(1) : '0';
+  const onTaskPct = (onTaskCount / total * 100).toFixed(1);
+  const offTaskPct = (offTaskCount / total * 100).toFixed(1);
 
   reportStats.innerHTML = `
     <div class="report-bar-container">
-      <div style="width: ${onTaskPct}%; background: #4CAF50; height: 100%;"></div>
-      <div style="width: ${offTaskPct}%; background: #f44336; height: 100%;"></div>
+      <div class="report-bar-on-task" style="width: ${onTaskPct}%;"></div>
+      <div class="report-bar-off-task" style="width: ${offTaskPct}%;"></div>
     </div>
     <div class="report-labels">
       <span class="report-label on-task">On Task: ${onTaskPct}%</span>
@@ -221,17 +386,112 @@ async function refreshReport() {
   `;
 }
 
+// Calculate and resize window to fit report content
+function resizeReportPanel() {
+  if (!isReportOpen) return;
+
+  // Wait for DOM to render before measuring
+  requestAnimationFrame(() => {
+    const maxWindowHeight = 600;
+    const topSectionHeight = document.getElementById('top-section').offsetHeight;
+    const reportContentHeight = document.getElementById('report-content').scrollHeight;
+    const panelPadding = 32; // 16px top + 16px bottom
+
+    const totalHeight = topSectionHeight + reportContentHeight + panelPadding;
+
+    window.acuity.resizeWindow(Math.min(totalHeight, maxWindowHeight));
+  });
+}
+
+// ResizeObserver to automatically resize report panel when content changes
+const reportContentObserver = new ResizeObserver(() => {
+  if (isReportOpen) resizeReportPanel();
+});
+
+// Refresh button - analyze activity breakdown
+reportRefreshBtn.addEventListener('click', async () => {
+  reportRefreshBtn.disabled = true;
+  reportRefreshBtn.textContent = 'Analyzing...';
+  reportChart.innerHTML = '';
+
+  try {
+    const history = await window.acuity.getHistory();
+    const offTaskActivities = history
+      .filter(item => item.type === 'observation' && item.onTask === false)
+      .map(item => item.activity);
+
+    if (offTaskActivities.length === 0) {
+      reportChart.innerHTML = '<p class="report-empty">No off-task activities to analyze yet.</p>';
+      resizeReportPanel();
+      return;
+    }
+
+    const categories = await window.acuity.categorizeActivities(offTaskActivities);
+    renderDonutChart(categories, offTaskActivities.length);
+    resizeReportPanel();
+  } catch (error) {
+    console.error('Error analyzing activities:', error);
+    reportChart.innerHTML = '<p class="report-empty">Error analyzing activities.</p>';
+  } finally {
+    reportRefreshBtn.disabled = false;
+    reportRefreshBtn.textContent = 'Analyze Activity Breakdown';
+  }
+});
+
+function renderDonutChart(categories, totalCount) {
+  const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF', '#7BC225'];
+
+  // Calculate counts and percentages for each category
+  const categoryData = Object.entries(categories).map(([name, activities], index) => ({
+    name,
+    count: activities.length,
+    percentage: (activities.length / totalCount * 100).toFixed(1),
+    color: colors[index % colors.length]
+  }));
+
+  // Sort by count descending
+  categoryData.sort((a, b) => b.count - a.count);
+
+  // Build SVG donut chart
+  const radius = 60;
+  const circumference = 2 * Math.PI * radius;
+  let offset = 0;
+
+  const segments = categoryData.map(cat => {
+    const segmentLength = (cat.count / totalCount) * circumference;
+    const segment = `<circle
+      cx="75" cy="75" r="${radius}"
+      stroke="${cat.color}"
+      stroke-dasharray="${segmentLength} ${circumference}"
+      stroke-dashoffset="${-offset}"
+    />`;
+    offset += segmentLength;
+    return segment;
+  }).join('');
+
+  // Build legend
+  const legendItems = categoryData.map(cat => `
+    <div class="legend-item">
+      <div class="legend-color" style="background: ${cat.color};"></div>
+      <span class="legend-text">${cat.name}</span>
+      <span class="legend-pct">${cat.percentage}%</span>
+    </div>
+  `).join('');
+
+  reportChart.innerHTML = `
+    <div class="donut-chart">
+      <svg viewBox="0 0 150 150">
+        ${segments}
+      </svg>
+    </div>
+    <div class="chart-legend">
+      ${legendItems}
+    </div>
+  `;
+}
+
 // Listen for analysis results
 window.acuity.onAnalysisResult((result) => {
-  // Update status indicator based on focus mode and on-task status
-  if (result.onTask === null) {
-    // Not checking focus, just observing
-    statusIndicator.className = 'observe';
-  } else {
-    // Focus mode - show on-task or off-task
-    statusIndicator.className = result.onTask ? 'on-task' : 'off-task';
-  }
-
   // Add to history list if expanded
   if (isExpanded) {
     addHistoryItem(result);
@@ -258,8 +518,8 @@ window.acuity.onTaskCompleted((result) => {
   console.log('Next todo index:', nextTodoIndex, 'todos:', todos);
   if (nextTodoIndex !== -1) {
     const nextTodo = todos[nextTodoIndex];
-    taskInput.value = nextTodo.text;
-    window.acuity.setTask(nextTodo.text);
+    const nextTask = nextTodo.text;
+    window.acuity.setTask(nextTask);
 
     // Remove from todos array and DOM
     todos.splice(nextTodoIndex, 1);
@@ -267,7 +527,27 @@ window.acuity.onTaskCompleted((result) => {
     if (todoElement) {
       todoElement.remove();
     }
-    resizeTodoPanel();
+    // Hide todos when locked in
+    updateTodoVisibility();
+
+    // Show next task as locked-in
+    isLockedIn = true;
+    lockedinText.textContent = nextTask;
+    taskInputWrapper.classList.add('hidden');
+    lockedinText.classList.remove('hidden');
+    lockedinHint.classList.remove('hidden');
+    taskHint.classList.add('hidden');
+  } else {
+    // No next todo - return to empty input state
+    isLockedIn = false;
+    window.acuity.setTask('');
+    lockedinText.classList.add('hidden');
+    lockedinHint.classList.add('hidden');
+    taskInputWrapper.classList.remove('hidden');
+    taskHint.classList.add('hidden');
+    topBar.classList.remove('locked-in');
+    goalBar.classList.remove('locked-in');
+    taskInput.focus();
   }
 });
 
@@ -334,45 +614,43 @@ function addHistoryItem(item) {
 
 // Calculate and resize window to fit to-do content
 function resizeTodoPanel() {
-  if (!isTodoOpen) return;
+  if (todoPanel.classList.contains('hidden')) return;
 
   const maxWindowHeight = 500;
-  const topBarHeight = 50;
-  const goalBarHeight = goalBar.classList.contains('hidden') ? 0 : 30;
-  const inputRowHeight = 50;
+
+  // Fixed measurements
+  const topSectionHeight = getBaseHeight();
   const panelPadding = 24;
+  const headerHeight = 30;
+  const itemHeight = 42;
   const itemGap = 8;
-  const baseItemHeight = 42;
+
+  // Reset items to natural size
+  document.querySelectorAll('.todo-item').forEach(item => {
+    item.style.padding = '10px 14px';
+    item.style.fontSize = '14px';
+    item.style.height = 'auto';
+    item.style.minHeight = 'auto';
+  });
 
   const itemCount = todos.length;
-  const baseHeight = topBarHeight + goalBarHeight + inputRowHeight + panelPadding;
-  const itemsHeight = itemCount > 0 ? (itemCount * baseItemHeight) + ((itemCount - 1) * itemGap) : 0;
-  const totalHeight = baseHeight + itemsHeight;
-
-  // Available space for items after accounting for fixed elements
-  const availableForItems = maxWindowHeight - topBarHeight - inputRowHeight - panelPadding;
+  const itemsHeight = itemCount > 0 ? (itemCount * itemHeight) + ((itemCount - 1) * itemGap) : 0;
+  const totalHeight = topSectionHeight + panelPadding + headerHeight + itemsHeight;
 
   if (totalHeight <= maxWindowHeight) {
-    // Reset to normal size
-    document.querySelectorAll('.todo-item').forEach(item => {
-      item.style.padding = '10px 14px';
-      item.style.fontSize = '14px';
-      item.style.height = 'auto';
-      item.style.minHeight = 'auto';
-    });
     window.acuity.resizeWindow(totalHeight);
   } else {
-    // Shrink items proportionally to fit available space
+    // Need to shrink items to fit
+    const availableForItems = maxWindowHeight - topSectionHeight - panelPadding - headerHeight;
     const totalGapsHeight = itemCount > 1 ? (itemCount - 1) * itemGap : 0;
     const spaceForItems = availableForItems - totalGapsHeight;
-    const heightPerItem = Math.max(16, spaceForItems / itemCount);
+    const heightPerItem = Math.max(20, spaceForItems / itemCount);
 
-    // Calculate shrink ratio based on available height per item
-    const shrinkRatio = Math.max(0.3, heightPerItem / baseItemHeight);
+    const shrinkRatio = Math.max(0.4, heightPerItem / itemHeight);
 
     document.querySelectorAll('.todo-item').forEach(item => {
-      const newPadding = Math.max(2, 10 * shrinkRatio);
-      const newFontSize = Math.max(8, 14 * shrinkRatio);
+      const newPadding = Math.max(4, 10 * shrinkRatio);
+      const newFontSize = Math.max(10, 14 * shrinkRatio);
       item.style.padding = `${newPadding}px 14px`;
       item.style.fontSize = `${newFontSize}px`;
       item.style.height = `${heightPerItem}px`;
@@ -382,85 +660,27 @@ function resizeTodoPanel() {
   }
 }
 
-// Toggle to-do panel
-todoBtn.addEventListener('click', () => {
-  isTodoOpen = !isTodoOpen;
-
-  // Close history and report if open
-  if (isTodoOpen && isExpanded) {
-    isExpanded = false;
-    historyPanel.classList.add('hidden');
-  }
-  if (isTodoOpen && isReportOpen) {
-    isReportOpen = false;
-    reportPanel.classList.add('hidden');
-  }
-
-  if (isTodoOpen) {
-    todoPanel.classList.remove('hidden');
-    resizeTodoPanel();
-    todoInput.focus();
-  } else {
-    todoPanel.classList.add('hidden');
-    if (!isExpanded && !isReportOpen) {
-      window.acuity.resizeWindow(getBaseHeight());
-    }
-  }
-});
-
-// Add todo on Enter key
-todoInput.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    todoInput.blur();
-    addTodo();
-  }
-});
-
-
-// Show hint when typing in empty todo list
-todoInput.addEventListener('input', () => {
-  if (todoInput.value.length > 0 && todos.length === 0) {
-    todoHint.classList.add('visible');
-  } else {
-    todoHint.classList.remove('visible');
-  }
-});
-
-function addTodo() {
-  const text = todoInput.value.trim();
-  if (todos.length >= 19) return;
-
-  const todo = {
-    id: Date.now(),
-    text: text
-  };
-
-  todos.push(todo);
-  const newItem = renderTodoItem(todo);
-  todoList.appendChild(newItem);
-  todoInput.value = '';
-  todoHint.classList.remove('visible');
-  resizeTodoPanel();
-
-  // Focus the new item's input synchronously to avoid RAF race conditions
-  const newInput = newItem.querySelector('.todo-item-input');
-  if (newInput) {
-    newInput.focus();
-  }
-}
 
 let draggedItem = null;
+let dragFromHandle = false;
+
+// Track mousedown on drag handles globally to avoid memory leaks
+document.addEventListener('mousedown', (e) => {
+  dragFromHandle = e.target.classList.contains('todo-drag-handle');
+});
 
 function renderTodoItem(todo) {
   const div = document.createElement('div');
   div.className = 'todo-item';
   div.dataset.id = todo.id;
-  // div.draggable = true;  // Temporarily disabled for testing
+  div.draggable = true;
 
   div.innerHTML = `
     <span class="todo-drag-handle">⠿</span>
-    <input type="text" class="todo-item-input" value="${todo.text}" />
+    <div class="todo-item-wrapper">
+      <input type="text" class="todo-item-input" value="${todo.text}" />
+      <span class="todo-item-hint">press enter</span>
+    </div>
     <button class="todo-delete">✕</button>
   `;
 
@@ -492,14 +712,16 @@ function renderTodoItem(todo) {
       const prevItem = div.previousElementSibling;
       todos = todos.filter(t => t.id !== todo.id);
       div.remove();
-      resizeTodoPanel();
       if (prevItem && prevItem.classList.contains('todo-item')) {
         const prevInput = prevItem.querySelector('.todo-item-input');
         prevInput.focus();
         prevInput.selectionStart = prevInput.value.length;
         prevInput.selectionEnd = prevInput.value.length;
+        resizeTodoPanel();
       } else {
-        todoInput.focus();
+        // No more items - hide todo panel and focus main task input
+        updateTodoVisibility();
+        taskInput.focus();
       }
     }
   });
@@ -508,11 +730,15 @@ function renderTodoItem(todo) {
   div.querySelector('.todo-delete').addEventListener('click', () => {
     todos = todos.filter(t => t.id !== todo.id);
     div.remove();
-    resizeTodoPanel();
+    updateTodoVisibility();
   });
 
-  // Drag and drop
+  // Drag and drop - only allow drag from handle
   div.addEventListener('dragstart', (e) => {
+    if (!dragFromHandle) {
+      e.preventDefault();
+      return;
+    }
     draggedItem = div;
     div.classList.add('dragging');
   });

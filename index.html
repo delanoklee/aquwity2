@@ -10,19 +10,34 @@
   <body>
     <div id="app">
       <div id="top-section">
-        <div id="goal-bar" class="hidden">
-          <span id="goal-display"></span>
-        </div>
-        <div id="goal-input-row" class="hidden">
-          <input type="text" id="goal-input" placeholder="What's your main goal?" />
+        <div id="goal-bar">
+          <input type="text" id="goal-input" placeholder="Goal" />
+          <span id="goal-display" class="hidden"></span>
+          <span id="goal-tooltip">Change your goal in settings</span>
         </div>
         <div id="top-bar">
-          <button id="goal-btn" title="Set your goal">🎯</button>
-          <button id="todo-btn" title="To-Do List">☑</button>
-          <input type="text" id="task-input" placeholder="What are you working on?" />
-          <div id="status-indicator"></div>
-          <button id="report-btn" title="View focus report">Report</button>
-          <img src="logo.png" id="logo" alt="Acuity Logo" title="Show/hide history" />
+          <div id="task-input-wrapper">
+            <input type="text" id="task-input" placeholder="What are you working on?" />
+            <span id="task-hint" class="hidden">enter to lockin · shift+enter to add todo</span>
+          </div>
+          <span id="lockedin-text" class="hidden"></span>
+          <span id="lockedin-hint" class="hidden">ctrl+shift+d marks task complete</span>
+          <img src="logo.png" id="logo" alt="Acuity Logo" />
+        </div>
+        <div id="todo-panel" class="hidden">
+          <div id="todo-list"></div>
+        </div>
+      </div>
+      <div id="logo-dropdown" class="hidden">
+        <button id="goal-btn">Goal</button>
+        <button id="report-btn">Report</button>
+        <button id="history-btn">Dev Testing</button>
+      </div>
+      <div id="goal-panel" class="hidden">
+        <div id="goal-panel-content">
+          <p id="goal-panel-header">Edit Goal</p>
+          <input type="text" id="goal-panel-input" placeholder="What's your main goal?" />
+          <button id="goal-save-btn">Save</button>
         </div>
       </div>
       <div id="history-panel" class="hidden">
@@ -32,20 +47,12 @@
         </div>
         <div id="history-list"></div>
       </div>
-      <div id="todo-panel" class="hidden">
-        <p id="todo-header">What are the most important things to get done today?</p>
-        <div id="todo-list"></div>
-        <div id="todo-input-row">
-          <div id="todo-input-wrapper">
-            <input type="text" id="todo-input" placeholder="Add a task..." />
-            <span id="todo-hint">press enter</span>
-          </div>
-        </div>
-      </div>
       <div id="report-panel" class="hidden">
         <div id="report-content">
           <p id="report-header">Focus Report</p>
           <div id="report-stats"></div>
+          <button id="report-refresh-btn">Analyze Activity Breakdown</button>
+          <div id="report-chart"></div>
         </div>
       </div>
     </div>

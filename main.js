@@ -320,6 +320,7 @@ function stopTracking() {
 
 // IPC handlers
 ipcMain.on('set-task', (event, taskText) => {
+  console.log('set-task received:', taskText);
   currentTask = taskText;
 });
 
@@ -368,6 +369,40 @@ ipcMain.handle('complete-todo', (event, todoText) => {
   completedTasks.push(completedTask);
   saveCompletedTasks();
   return completedTask;
+});
+
+ipcMain.handle('categorize-activities', async (event, activities) => {
+  if (!process.env.GEMINI_API_KEY || activities.length === 0) {
+    return {};
+  }
+
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+    const prompt = `I have a list of off-task activities that a user did while they should have been working. Please categorize these activities into logical groups.
+
+Activities:
+${activities.map((a, i) => `${i + 1}. ${a}`).join('\n')}
+
+Analyze these activities and group them into categories that make sense (e.g., "Social Media", "Entertainment", "Shopping", "News", "Communication", etc.). You decide the categories based on what you see - don't use predefined categories.
+
+Respond with JSON only, no markdown. Format:
+{"categories": {"Category Name": ["activity 1", "activity 2"], "Another Category": ["activity 3"]}}`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return parsed.categories || {};
+    }
+    return {};
+  } catch (error) {
+    console.error('Error categorizing activities:', error);
+    return {};
+  }
 });
 
 function showInterventionWindow() {
