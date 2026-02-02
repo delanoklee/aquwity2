@@ -6,10 +6,7 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 // In-memory state
 let currentTask = "";
-let screenshots = {
-  previous: [],  // array of base64 strings (one per monitor)
-  current: []    // array of base64 strings (one per monitor)
-};
+let screenshotBuffer = []; // Holds up to 3 screenshots for batch analysis
 let history = [];
 let trackingInterval = null;
 let mainWindow = null;
@@ -17,7 +14,7 @@ let interventionWindow = null;
 let completedTasks = [];
 let completedTasksPath = null;
 let offTaskCount = 0;
-let focusEnabled = false;
+const focusEnabled = true;
 
 function loadCompletedTasks() {
   try {
@@ -79,49 +76,56 @@ async function captureAllScreens() {
   return screenshots;
 }
 
-async function analyzeWithGemini() {
+async function analyzeBatch(buffer) {
   if (!currentTask || currentTask.trim() === '') {
-    return { onTask: false, reason: "No task specified" };
+    return { on: 0, activity: "No task specified" };
   }
 
   if (!process.env.GEMINI_API_KEY) {
-    return { onTask: false, reason: "API key not configured" };
+    return { on: 0, activity: "API key not configured" };
   }
 
   try {
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-    // Build the image parts array
+    // Build the image parts array from all screenshots in the buffer
     const imageParts = [];
-
-    // Add previous screenshots
-    for (const base64 of screenshots.previous) {
-      imageParts.push({
-        inlineData: {
-          data: base64,
-          mimeType: "image/png"
-        }
-      });
+    for (const screenshotSet of buffer) {
+      for (const base64 of screenshotSet) {
+        imageParts.push({
+          inlineData: {
+            data: base64,
+            mimeType: "image/png"
+          }
+        });
+      }
     }
 
-    // Add current screenshots
-    for (const base64 of screenshots.current) {
-      imageParts.push({
-        inlineData: {
-          data: base64,
-          mimeType: "image/png"
-        }
-      });
-    }
+    const prompt = `Context:
+Target Task: "${currentTask}"
 
-    const numMonitors = screenshots.current.length;
-    const prompt = `Task the user is working on: "${currentTask}"
+Input:
+3 screenshots provided.
 
-I'm showing you screenshots from all monitors. The first ${numMonitors} images are from the previous check (2 minutes ago), the next ${numMonitors} images are from the current check.
+Instructions:
+1. Analyze the screenshots to determine if the user is working on the "Target Task".
+2. Read window titles, file names, URL bars, and visible code/text.
+3. If there is no visual change (motion) between frames, assume the user is READING or THINKING. Do not mark them as "off task" solely due to lack of motion.
+4. If the user is on a relevant site (e.g., StackOverflow, Docs) but the specific page is unrelated to the task (e.g., reading about "Cooking" when the task is "Coding"), mark as off task (0).
 
-Analyze if the user appears to be working on the stated task.
+Output Format:
+Return ONLY a raw JSON object (no markdown formatting).
+{
+  "on": 0 or 1,
+  "activity": "The specific granular activity"
+}
 
-Respond with JSON only, no markdown: {"onTask": true/false, "reason": "brief explanation"}`;
+Activity Granularity Rules:
+- You must quote specific text found on the screen.
+- BAD: "Reading documentation"
+- GOOD: "Reading the 'Authentication' section of Stripe API docs"
+- BAD: "Coding"
+- GOOD: "Editing the 'captureScreens' function in main.js around line 45"`;
 
     const result = await model.generateContent([prompt, ...imageParts]);
     const response = await result.response;
@@ -130,68 +134,42 @@ Respond with JSON only, no markdown: {"onTask": true/false, "reason": "brief exp
     // Parse JSON from response
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+      const parsed = JSON.parse(jsonMatch[0]);
+      // Normalize the response
+      return {
+        on: parsed.on === 1 || parsed.on === true ? 1 : 0,
+        activity: parsed.activity || "Unknown activity"
+      };
     }
-    return { onTask: false, reason: "Could not parse response" };
+    return { on: 0, activity: "Could not parse response" };
   } catch (error) {
     console.error('Gemini API error:', error);
-    return { onTask: false, reason: `API error: ${error.message}` };
+    return { on: 0, activity: `API error: ${error.message}` };
   }
 }
 
-async function analyzeActivity() {
+async function analyzeActivityObserveMode(buffer) {
   if (!process.env.GEMINI_API_KEY) {
     return { activity: "API key not configured" };
   }
 
-  const checkFocus = focusEnabled && currentTask && currentTask.trim();
-
   try {
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-    // Build the image parts array
+    // Build the image parts array from all screenshots in the buffer
     const imageParts = [];
-
-    // Add previous screenshots
-    for (const base64 of screenshots.previous) {
-      imageParts.push({
-        inlineData: {
-          data: base64,
-          mimeType: "image/png"
-        }
-      });
+    for (const screenshotSet of buffer) {
+      for (const base64 of screenshotSet) {
+        imageParts.push({
+          inlineData: {
+            data: base64,
+            mimeType: "image/png"
+          }
+        });
+      }
     }
 
-    // Add current screenshots
-    for (const base64 of screenshots.current) {
-      imageParts.push({
-        inlineData: {
-          data: base64,
-          mimeType: "image/png"
-        }
-      });
-    }
-
-    const numMonitors = screenshots.current.length;
-
-    let prompt;
-    if (checkFocus) {
-      prompt = `Analyze the screenshots and:
-1. Describe SPECIFICALLY what the user is doing (be granular, not just "using VS Code")
-2. Determine if they are working on their stated task: "${currentTask}"
-
-Examples of good granularity:
-- LinkedIn: 'Scrolling through feed reading posts' vs 'Viewing a specific person's profile'
-- VS Code: 'Writing a new function in main.js' vs 'Debugging with breakpoints'
-- Browser: 'Reading a technical article about React hooks' vs 'Shopping on Amazon'
-
-Look at window titles, visible text, cursor position, and UI elements.
-
-I'm showing you screenshots from all monitors. The first ${numMonitors} images are from the previous check (2 minutes ago), the next ${numMonitors} images are from the current check.
-
-Respond with JSON only, no markdown: {"activity": "specific granular description", "onTask": true/false}`;
-    } else {
-      prompt = `Analyze the screenshots and describe SPECIFICALLY what the user is doing.
+    const prompt = `Analyze the screenshots and describe SPECIFICALLY what the user is doing.
 Be extremely granular - don't just say 'using LinkedIn' or 'in VS Code'.
 
 Examples of good granularity:
@@ -205,10 +183,9 @@ Examples of good granularity:
 Look at window titles, visible text, cursor position, and UI elements to determine
 the specific action, not just the application.
 
-I'm showing you screenshots from all monitors. The first ${numMonitors} images are from the previous check (2 minutes ago), the next ${numMonitors} images are from the current check.
+I'm showing you 3 consecutive screenshots (1 second apart).
 
 Respond with JSON only, no markdown: {"activity": "specific granular description of current activity"}`;
-    }
 
     const result = await model.generateContent([prompt, ...imageParts]);
     const response = await result.response;
@@ -227,28 +204,41 @@ Respond with JSON only, no markdown: {"activity": "specific granular description
 }
 
 async function performCheck() {
-  console.log('Performing check...');
-
-  // Move current to previous
-  screenshots.previous = screenshots.current;
+  console.log('Capturing screenshot...');
 
   // Capture new screenshots
-  screenshots.current = await captureAllScreens();
-  console.log(`Captured ${screenshots.current.length} screen(s)`);
+  const currentScreenshot = await captureAllScreens();
+  screenshotBuffer.push(currentScreenshot);
+  console.log(`Captured ${currentScreenshot.length} screen(s), buffer size: ${screenshotBuffer.length}/3`);
 
-  // Only analyze if we have both sets (skip first check)
-  if (screenshots.previous.length > 0) {
-    console.log('Analyzing activity...', focusEnabled ? '(focus enabled)' : '(observe only)');
-    const result = await analyzeActivity();
+  // Only analyze when we have 3 screenshots (every 3 seconds)
+  if (screenshotBuffer.length >= 3) {
+    const checkingFocus = focusEnabled && currentTask && currentTask.trim();
+    console.log('Analyzing batch...', checkingFocus ? '(focus enabled)' : '(observe only)');
+
+    let result;
+    if (checkingFocus) {
+      result = await analyzeBatch(screenshotBuffer);
+      // Convert to common format
+      result = {
+        activity: result.activity,
+        onTask: result.on === 1
+      };
+    } else {
+      result = await analyzeActivityObserveMode(screenshotBuffer);
+      result.onTask = null;
+    }
+
     console.log('Analysis result:', result);
 
-    const checkingFocus = focusEnabled && currentTask && currentTask.trim();
+    // Reset buffer after analysis
+    screenshotBuffer = [];
 
     const entry = {
       timestamp: new Date().toISOString(),
       type: 'observation',
       activity: result.activity,
-      onTask: checkingFocus ? result.onTask : null
+      onTask: result.onTask
     };
     history.push(entry);
 
@@ -261,14 +251,23 @@ async function performCheck() {
       );
 
       if (result.onTask || isError) {
+        // Reset when back on-task
+        if (offTaskCount > 0) {
+          mainWindow.setAlwaysOnTop(false);
+          mainWindow.webContents.send('off-task-level', 0);
+        }
         offTaskCount = 0;
       } else {
         offTaskCount++;
         console.log('Off-task count:', offTaskCount);
 
-        // Trigger intervention popup after 2 consecutive off-task checks
-        if (offTaskCount >= 2) {
-          showInterventionWindow();
+        if (offTaskCount === 1) {
+          // First warning: bring window to top
+          mainWindow.setAlwaysOnTop(true);
+          mainWindow.webContents.send('off-task-level', 1);
+        } else if (offTaskCount >= 2) {
+          // Progressive red warning (cap at 5)
+          mainWindow.webContents.send('off-task-level', Math.min(offTaskCount, 7));
         }
       }
     }
@@ -277,22 +276,21 @@ async function performCheck() {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('analysis-result', entry);
     }
-  } else {
-    console.log('Skipping analysis (need previous screenshots first)');
   }
 }
 
 function getCheckInterval() {
-  // 7 seconds when locked in, 3 minutes when not
-  return focusEnabled ? 7 * 1000 : 3 * 60 * 1000;
+  // 1 second when locked in (batch analyzed every 3 captures), 3 minutes when not
+  return focusEnabled ? 1 * 1000 : 3 * 60 * 1000;
 }
 
 function updateTrackingInterval() {
   if (!trackingInterval) return;
 
   clearInterval(trackingInterval);
+  screenshotBuffer = []; // Reset buffer when interval changes
   trackingInterval = setInterval(performCheck, getCheckInterval());
-  console.log(`Interval updated: ${focusEnabled ? '7 seconds' : '3 minutes'}`);
+  console.log(`Interval updated: ${focusEnabled ? '1 second (batch every 3s)' : '3 minutes'}`);
 }
 
 function startTracking() {
@@ -300,15 +298,15 @@ function startTracking() {
 
   console.log('Tracking started');
 
+  // Reset buffer
+  screenshotBuffer = [];
+
   // Perform initial capture immediately
-  captureAllScreens().then(screens => {
-    screenshots.current = screens;
-    console.log(`Initial capture: ${screens.length} screen(s)`);
-  });
+  performCheck();
 
   // Set up interval based on focus mode
   trackingInterval = setInterval(performCheck, getCheckInterval());
-  console.log(`Interval set: ${focusEnabled ? '7 seconds' : '3 minutes'}`);
+  console.log(`Interval set: ${focusEnabled ? '1 second (batch every 3s)' : '3 minutes'}`);
 }
 
 function stopTracking() {
@@ -336,13 +334,10 @@ ipcMain.on('stop-tracking', () => {
   stopTracking();
 });
 
+// Focus is always enabled - no-op handler for backwards compatibility
 ipcMain.on('set-focus-enabled', (event, enabled) => {
-  focusEnabled = enabled;
-  if (!enabled) {
-    offTaskCount = 0; // Reset when disabling focus
-  }
-  updateTrackingInterval();
-  console.log('Focus enabled:', enabled);
+  // Focus mode is always on now - this handler is kept for API compatibility
+  console.log('Focus mode is always on (received:', enabled, ')');
 });
 
 ipcMain.on('resize-window', (event, height) => {

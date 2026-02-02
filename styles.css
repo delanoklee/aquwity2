@@ -85,7 +85,7 @@ body {
   padding: 8px 12px;
   gap: 10px;
   background: #E5D5B5;
-  height: 50px;
+  min-height: 50px;
   flex-shrink: 0;
   -webkit-app-region: drag;
   position: relative;
@@ -96,95 +96,64 @@ body {
   background: #1a1a2e;
 }
 
-#task-input {
-  width: 100%;
-  height: 34px;
-  padding: 8px 100px 8px 12px;
-  border: none;
-  border-radius: 4px;
-  background: #D4C4A8;
-  color: #3D5A6B;
-  font-family: 'American Typewriter', 'Courier New', Courier, monospace;
-  font-size: 14px;
-  outline: none;
-  -webkit-app-region: no-drag;
+/* Progressive off-task warning colors (levels 2-5) */
+#top-bar.locked-in[data-off-task-level="2"] {
+  background: #4a1a1a; /* Light red */
 }
 
-#task-input::placeholder {
-  color: #7A8B8C;
+#top-bar.locked-in[data-off-task-level="3"] {
+  background: #6b1a1a; /* Medium red */
 }
 
-#task-input:focus {
-  background: #C8B898;
+#top-bar.locked-in[data-off-task-level="4"] {
+  background: #8b0000; /* Dark red */
 }
 
-#task-input-wrapper {
-  flex: 1;
-  position: relative;
-  display: flex;
-  align-items: center;
+#top-bar.locked-in[data-off-task-level="5"] {
+  background: #a50000; /* Darkest/brightest red */
 }
 
-#task-input-wrapper.hidden {
+#top-bar.locked-in[data-off-task-level="6"] {
+  background: #c00000; /* Intense red */
+}
+
+#top-bar.locked-in[data-off-task-level="7"] {
+  background: #ff0000; /* Maximum red */
+}
+
+#top-bar.locked-in #todo-list {
   display: none;
 }
 
-#task-hint {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #9A8B7C;
-  font-size: 12px;
-  font-style: italic;
-  pointer-events: none;
-  opacity: 0.7;
-}
-
-#task-hint.hidden {
+#lockedin-task {
   display: none;
-}
-
-#lockedin-text {
   flex: 1;
-  color: #3D5A6B;
-  font-size: 16px;
-  font-weight: bold;
   text-align: center;
-  cursor: pointer;
-  transition: opacity 0.2s;
-  -webkit-app-region: no-drag;
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
 }
 
-#lockedin-text.hidden {
-  display: none;
+#top-bar.locked-in #lockedin-task {
+  display: block;
 }
-
-#lockedin-text:hover {
-  opacity: 0.7;
-}
-
-#lockedin-hint {
-  color: #eee;
-  font-size: 10px;
-  font-style: italic;
-  opacity: 0.4;
-  position: fixed;
-  bottom: 12px;
-  right: 12px;
-}
-
-#top-bar.locked-in #lockedin-text {
-  color: #eee;
-}
-
 
 #top-bar.locked-in #logo {
   display: none;
 }
 
-#lockedin-hint.hidden {
+#lockedin-tip {
   display: none;
+  position: absolute;
+  bottom: 4px;
+  right: 8px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.3);
+  -webkit-app-region: no-drag;
+}
+
+#top-bar.locked-in #lockedin-tip {
+  display: block;
 }
 
 button {
@@ -219,6 +188,7 @@ button {
   height: 46px;
   width: auto;
   margin-left: auto;
+  align-self: flex-start;
   -webkit-app-region: no-drag;
   cursor: pointer;
 }
@@ -384,19 +354,6 @@ button {
   background: #F57C00;
 }
 
-/* To-Do Panel */
-#todo-panel {
-  background: #E5D5B5;
-  padding: 0 12px 12px 12px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border-radius: 0 0 8px 8px;
-}
-
-#todo-panel.hidden {
-  display: none;
-}
 
 /* Goal Panel */
 #goal-panel {
@@ -493,17 +450,19 @@ button {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
+  padding-bottom: 4px;
   overflow: hidden;
+  -webkit-app-region: no-drag;
 }
 
 .todo-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 14px;
+  gap: 6px;
+  padding: 4px 10px;
   background: #D4C4A8;
-  border-radius: 6px;
+  border-radius: 4px;
   color: #3D5A6B;
   transition: padding 0.15s, font-size 0.15s;
   flex-shrink: 1;
@@ -529,23 +488,31 @@ button {
 
 .todo-item-input {
   flex: 1;
-  font-size: 14px;
+  font-size: 13px;
   font-family: 'American Typewriter', 'Courier New', Courier, monospace;
   background: transparent;
   border: none;
   outline: none;
   color: #3D5A6B;
   padding: 0;
-  padding-right: 70px;
+}
+
+.todo-item-input::placeholder {
+  color: #7A8B8C;
 }
 
 .todo-item-hint {
-  position: absolute;
-  right: 0;
   color: #9A8B7C;
-  font-size: 11px;
+  font-size: 10px;
   font-style: italic;
+  opacity: 0;
   pointer-events: none;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+  margin-left: 8px;
+}
+
+.todo-item-input:focus ~ .todo-item-hint {
   opacity: 0.7;
 }
 
@@ -563,8 +530,8 @@ button {
 .todo-delete {
   background: transparent;
   color: #8B6B5D;
-  font-size: 16px;
-  padding: 4px 8px;
+  font-size: 14px;
+  padding: 2px 4px;
   opacity: 0.6;
 }
 
@@ -576,7 +543,7 @@ button {
 
 .todo-drag-handle {
   color: #7A8B8C;
-  font-size: 20px;
+  font-size: 16px;
   opacity: 0.6;
   cursor: grab;
   flex-shrink: 0;

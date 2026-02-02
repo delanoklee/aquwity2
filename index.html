@@ -16,16 +16,10 @@
           <span id="goal-tooltip">Change your goal in settings</span>
         </div>
         <div id="top-bar">
-          <div id="task-input-wrapper">
-            <input type="text" id="task-input" placeholder="What are you working on?" />
-            <span id="task-hint" class="hidden">enter to lockin · shift+enter to add todo</span>
-          </div>
-          <span id="lockedin-text" class="hidden"></span>
-          <span id="lockedin-hint" class="hidden">ctrl+shift+d marks task complete</span>
-          <img src="logo.png" id="logo" alt="Acuity Logo" />
-        </div>
-        <div id="todo-panel" class="hidden">
           <div id="todo-list"></div>
+          <span id="lockedin-task"></span>
+          <span id="lockedin-tip">Ctrl+Shift+D to mark complete</span>
+          <img src="logo.png" id="logo" alt="Acuity Logo" />
         </div>
       </div>
       <div id="logo-dropdown" class="hidden">
@@ -41,10 +35,6 @@
         </div>
       </div>
       <div id="history-panel" class="hidden">
-        <div id="history-controls">
-          <button id="track-btn">Start</button>
-          <button id="focus-btn" title="Enable focus mode to get nudged when off-task">Lock in</button>
-        </div>
         <div id="history-list"></div>
       </div>
       <div id="report-panel" class="hidden">

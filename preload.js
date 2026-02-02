@@ -44,11 +44,11 @@ contextBridge.exposeInMainWorld('acuity', {
     });
   },
 
-  setFocusEnabled: (enabled) => {
-    ipcRenderer.send('set-focus-enabled', enabled);
-  },
-
   categorizeActivities: (activities) => {
     return ipcRenderer.invoke('categorize-activities', activities);
+  },
+
+  onOffTaskLevel: (callback) => {
+    ipcRenderer.on('off-task-level', (event, level) => callback(level));
   }
 });
