@@ -18,6 +18,7 @@ module.exports = {
       name: '@electron-forge/maker-squirrel',
       config: {
         name: 'aquwity',
+        setupExe: 'aquwity.exe',
       },
     },
     {
