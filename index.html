@@ -3,8 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="Content-Security-Policy"
-          content="default-src 'self'; script-src 'self'; style-src 'self'" />
+          content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com" />
     <title>Acuity - Focus Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -19,11 +22,11 @@
           <div id="todo-list"></div>
           <span id="lockedin-task"></span>
           <span id="lockedin-tip">Ctrl+Shift+D to mark complete</span>
-          <svg id="hold-progress-ring" width="44" height="44" style="display: none;">
-            <circle cx="22" cy="22" r="18" stroke="#ccc" stroke-width="3" fill="none" opacity="0.3" />
-            <circle id="hold-progress-circle" cx="22" cy="22" r="18" stroke="#7B5D8C" stroke-width="3" fill="none"
-              stroke-dasharray="113.1" stroke-dashoffset="113.1" stroke-linecap="round"
-              transform="rotate(-90 22 22)" />
+          <svg id="hold-progress-ring" width="32" height="32" style="display: none;">
+            <circle cx="16" cy="16" r="13" stroke="#ccc" stroke-width="2" fill="none" opacity="0.3" />
+            <circle id="hold-progress-circle" cx="16" cy="16" r="13" stroke="#5D7A8C" stroke-width="2" fill="none"
+              stroke-dasharray="81.7" stroke-dashoffset="81.7" stroke-linecap="round"
+              transform="rotate(-90 16 16)" />
           </svg>
           <img src="logo.png" id="logo" alt="Acuity Logo" />
         </div>
@@ -46,6 +49,12 @@
       <div id="report-panel" class="hidden">
         <div id="report-content">
           <p id="report-header">Focus Report</p>
+          <div id="report-date-range">
+            <button class="date-range-btn active" data-range="today">Today</button>
+            <button class="date-range-btn" data-range="week">Week</button>
+            <button class="date-range-btn" data-range="month">Month</button>
+            <button class="date-range-btn" data-range="all">All</button>
+          </div>
           <div id="report-stats"></div>
           <button id="report-refresh-btn">Analyze Activity Breakdown</button>
           <div id="report-chart"></div>

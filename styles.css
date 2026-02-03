@@ -5,7 +5,7 @@
 }
 
 body {
-  font-family: 'American Typewriter', 'Courier New', Courier, monospace;
+  font-family: 'Nunito', sans-serif;
   background: transparent;
   color: #eee;
   overflow: hidden;
@@ -25,10 +25,10 @@ body {
 }
 
 #goal-bar {
-  background: #7B5D8C;
+  background: #5D7A8C;
   color: white;
-  padding: 8px 12px;
-  font-size: 14px;
+  padding: 2px 8px;
+  font-size: 10px;
   font-weight: bold;
   text-align: center;
   -webkit-app-region: drag;
@@ -74,9 +74,7 @@ body {
 }
 
 #goal-bar.locked-in {
-  padding: 4px 12px;
-  font-size: 11px;
-  opacity: 0.6;
+  display: none;
 }
 
 #top-bar {
@@ -128,7 +126,7 @@ body {
 /* Hold progress ring */
 #hold-progress-ring {
   position: absolute;
-  top: 50%;
+  top: 40%;
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 10;
@@ -178,7 +176,7 @@ button {
   padding: 8px 16px;
   border: none;
   border-radius: 4px;
-  font-family: 'American Typewriter', 'Courier New', Courier, monospace;
+  font-family: 'Nunito', sans-serif;
   font-size: 13px;
   cursor: pointer;
   transition: background 0.2s;
@@ -406,7 +404,7 @@ button {
   border-radius: 4px;
   background: #D4C4A8;
   color: #3D5A6B;
-  font-family: 'American Typewriter', 'Courier New', Courier, monospace;
+  font-family: 'Nunito', sans-serif;
   font-size: 14px;
   outline: none;
 }
@@ -426,7 +424,7 @@ button {
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-family: 'American Typewriter', 'Courier New', Courier, monospace;
+  font-family: 'Nunito', sans-serif;
   font-size: 13px;
 }
 
@@ -439,10 +437,10 @@ button {
   background: rgba(255,255,255,0.2);
   border: none;
   border-radius: 4px;
-  padding: 4px 8px;
+  padding: 1px 6px;
   color: white;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 10px;
   font-weight: bold;
   text-align: center;
   outline: none;
@@ -507,7 +505,7 @@ button {
 .todo-item-input {
   flex: 1;
   font-size: 13px;
-  font-family: 'American Typewriter', 'Courier New', Courier, monospace;
+  font-family: 'Nunito', sans-serif;
   background: transparent;
   border: none;
   outline: none;
@@ -679,7 +677,7 @@ button {
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-family: 'American Typewriter', 'Courier New', Courier, monospace;
+  font-family: 'Nunito', sans-serif;
   font-size: 12px;
   width: 100%;
 }
@@ -744,6 +742,139 @@ button {
 
 .legend-pct {
   color: #888;
+  margin-left: auto;
+}
+
+/* Date range selector */
+#report-date-range {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.date-range-btn {
+  flex: 1;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  color: #888;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.date-range-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.date-range-btn.active {
+  background: rgba(74, 222, 128, 0.2);
+  border-color: #4ade80;
+  color: #4ade80;
+}
+
+/* Time stats */
+.report-time-stats {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.time-stat {
+  text-align: center;
+}
+
+.time-value {
+  display: block;
+  font-size: 24px;
+  font-weight: 600;
+  color: #4ade80;
+}
+
+.time-label {
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+}
+
+/* Per-task breakdown */
+.task-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.task-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 12px;
+  border-left: 3px solid #4ade80;
+}
+
+.task-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.task-card-name {
+  font-size: 13px;
+  color: #eee;
+  font-weight: 500;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 12px;
+}
+
+.task-card-time {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4ade80;
+  white-space: nowrap;
+}
+
+.task-card-bar {
+  height: 8px;
+  background: #f44336;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.task-card-bar-fill {
+  height: 100%;
+  background: #4ade80;
+  border-radius: 4px 0 0 4px;
+  transition: width 0.3s ease;
+}
+
+.task-card-footer {
+  display: flex;
+  gap: 12px;
+  font-size: 10px;
+}
+
+.task-card-pct {
+  font-weight: 500;
+}
+
+.task-card-pct.on-task {
+  color: #4ade80;
+}
+
+.task-card-pct.off-task {
+  color: #f44336;
+}
+
+.task-card-completed {
+  color: #666;
   margin-left: auto;
 }
 
