@@ -90,6 +90,7 @@ jobs:
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          DEBUG: "electron-forge:*,electron-osx-sign:*,@electron/notarize:*,electron-packager:*"
         run: npm run publish
 
       - name: Clean up keychain
