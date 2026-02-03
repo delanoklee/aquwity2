@@ -9,18 +9,31 @@ module.exports = {
       /^\/website$/,
       /^\/\.git$/,
       /^\/\.gitignore$/,
-      /^\/logo\.png$/,
       /^\/slider\.png$/,
     ],
   },
   rebuildConfig: {},
   makers: [
     {
+      name: '@electron-forge/maker-zip',
+      platforms: ['win32'],
+    },
+    {
       name: '@electron-forge/maker-deb',
       config: {
         options: {
           icon: './icons/icon.png',
         },
+      },
+    },
+    {
+      name: '@electron-forge/maker-zip',
+      platforms: ['darwin'],
+    },
+    {
+      name: '@electron-forge/maker-dmg',
+      config: {
+        icon: './icons/icon.png',
       },
     },
   ],

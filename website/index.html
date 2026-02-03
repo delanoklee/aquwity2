@@ -3,21 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acuity - Stay Focused on What Matters</title>
+    <title>Aquwity - Stay Focused and Get More Done</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <main class="hero">
-        <img src="logo.png" alt="Acuity Logo" class="logo">
-        <h1 class="app-name">Acuity</h1>
-        <p class="tagline">Stay focused on what matters</p>
+        <img src="logo.png" alt="Aquwity Logo" class="logo">
+        <h1 class="app-name">Aquwity</h1>
+        <p class="subtitle">The app that helps you stay focused and get more done.</p>
         <div class="button-group">
-            <a href="#" class="btn btn-primary">Get Started for Free</a>
+            <a id="download-btn" href="#" class="btn btn-primary">Download for Your OS</a>
             <a href="https://calendly.com/delanklee/30min" class="btn btn-outline">Book a Demo</a>
         </div>
         <p class="description">
             A simple, distraction-free focus app that helps you stay on track.
         </p>
+        <p class="download-links">
+            <a href="https://github.com/delanoklee/aquwity2/releases/latest/download/aquwity-win32-x64-1.0.0.zip">Windows</a> |
+            <a href="https://github.com/delanoklee/aquwity2/releases/latest/download/aquwity_1.0.0_amd64.deb">Linux</a> |
+            <span class="coming-soon">macOS (coming soon)</span>
+        </p>
     </main>
+    <script>
+        // Detect OS and update download button
+        const btn = document.getElementById('download-btn');
+        const ua = navigator.userAgent.toLowerCase();
+
+        if (ua.includes('win')) {
+            btn.textContent = 'Download for Windows';
+            btn.href = 'https://github.com/delanoklee/aquwity2/releases/latest/download/aquwity-win32-x64-1.0.0.zip';
+        } else if (ua.includes('mac')) {
+            btn.textContent = 'Download for macOS (Coming Soon)';
+            btn.href = '#';
+            btn.classList.add('disabled');
+        } else if (ua.includes('linux')) {
+            btn.textContent = 'Download for Linux';
+            btn.href = 'https://github.com/delanoklee/aquwity2/releases/latest/download/aquwity_1.0.0_amd64.deb';
+        }
+    </script>
 </body>
 </html>

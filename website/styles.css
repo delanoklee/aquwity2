@@ -5,7 +5,7 @@
 }
 
 body {
-    font-family: 'American Typewriter', 'Courier New', monospace;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background-color: #F0DAB3;
     color: #3D5A6B;
     min-height: 100vh;
@@ -17,7 +17,7 @@ body {
 .hero {
     text-align: center;
     padding: 2rem;
-    max-width: 600px;
+    max-width: 1200px;
 }
 
 .logo {
@@ -29,16 +29,16 @@ body {
 
 .app-name {
     font-size: 3rem;
-    font-weight: normal;
+    font-weight: 600;
     margin-bottom: 0.5rem;
-    letter-spacing: 0.1em;
+    line-height: 1.2;
 }
 
-.tagline {
-    font-size: 1.25rem;
+.subtitle {
+    font-size: 1.75rem;
+    font-weight: 400;
     color: #5D7A8C;
     margin-bottom: 2rem;
-    font-style: italic;
 }
 
 .button-group {
@@ -97,11 +97,7 @@ body {
     }
 
     .app-name {
-        font-size: 2.25rem;
-    }
-
-    .tagline {
-        font-size: 1.1rem;
+        font-size: 2rem;
     }
 
     .button-group {

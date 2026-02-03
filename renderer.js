@@ -300,10 +300,11 @@ async function refreshReport() {
   const onTaskPct = (onTaskCount / total * 100).toFixed(1);
   const offTaskPct = (offTaskCount / total * 100).toFixed(1);
 
+  console.log('Report data:', { total, onTaskCount, offTaskCount, onTaskPct, offTaskPct });
+
   reportStats.innerHTML = `
-    <div class="report-bar-container">
-      <div class="report-bar-on-task" style="width: ${onTaskPct}%;"></div>
-      <div class="report-bar-off-task" style="width: ${offTaskPct}%;"></div>
+    <div class="report-bar">
+      <div class="report-bar-fill" style="width: ${onTaskPct}%;"></div>
     </div>
     <div class="report-labels">
       <span class="report-label on-task">On Task: ${onTaskPct}%</span>
