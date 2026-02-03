@@ -26,6 +26,8 @@ let isGoalPanelOpen = false;
 let isLogoDropdownOpen = false;
 let todos = [];
 let currentGoal = localStorage.getItem('acuity-goal') || '';
+let taskStartTime = null;
+let reportDateRange = 'today';
 
 // Hold-to-confirm state
 let holdTimer = null;
@@ -73,7 +75,7 @@ function showHoldIndicator(show) {
 function updateHoldProgress(progress) {
   const circle = document.getElementById('hold-progress-circle');
   if (circle) {
-    const circumference = 2 * Math.PI * 18; // radius = 18
+    const circumference = 2 * Math.PI * 13; // radius = 13
     const offset = circumference * (1 - progress);
     circle.style.strokeDashoffset = offset;
   }
@@ -165,11 +167,10 @@ goalPanelInput.addEventListener('keydown', (e) => {
 
 // Update todo visibility and resize window
 function updateTodoVisibility() {
-  if (isLockedIn) {
-    window.acuity.resizeWindow(getBaseHeight());
-  } else {
+  if (!isLockedIn) {
     resizeTodoPanel();
   }
+  // When locked in, keep the same window size
 }
 
 // Close history/report/goal panels and dropdown when clicking outside the app
@@ -196,21 +197,63 @@ window.addEventListener('blur', () => {
   }
 });
 
+// Close panels when clicking on the top bar
+topBar.addEventListener('click', (e) => {
+  // Don't close if clicking on logo (which toggles dropdown)
+  if (e.target === logo || logo.contains(e.target)) {
+    return;
+  }
+
+  const wasOpen = isExpanded || isReportOpen || isGoalPanelOpen || isLogoDropdownOpen;
+
+  if (isExpanded) {
+    isExpanded = false;
+    historyPanel.classList.add('hidden');
+  }
+  if (isReportOpen) {
+    reportContentObserver.disconnect();
+    isReportOpen = false;
+    reportPanel.classList.add('hidden');
+  }
+  if (isGoalPanelOpen) {
+    isGoalPanelOpen = false;
+    goalPanel.classList.add('hidden');
+  }
+  if (isLogoDropdownOpen) {
+    isLogoDropdownOpen = false;
+    logoDropdown.classList.add('hidden');
+  }
+
+  if (wasOpen) {
+    updateTodoVisibility();
+  }
+});
+
 // Backspace exits locked-in mode (hold to confirm)
 let backspaceHoldActive = false;
+let backspaceConsumed = false;  // Tracks if backspace was used for hold-exit
+
 document.addEventListener('keydown', (e) => {
+  // Block backspace while consumed (after hold completed, before keyup)
+  if (e.key === 'Backspace' && backspaceConsumed) {
+    e.preventDefault();
+    return;
+  }
+
   if (e.key === 'Backspace' && isLockedIn && !backspaceHoldActive) {
     e.preventDefault();
     backspaceHoldActive = true;
     startHold(() => {
+      backspaceConsumed = true;  // Mark as consumed when hold completes
       exitLockedInMode();
     });
   }
 });
 
 document.addEventListener('keyup', (e) => {
-  if (e.key === 'Backspace' && backspaceHoldActive) {
+  if (e.key === 'Backspace') {
     backspaceHoldActive = false;
+    backspaceConsumed = false;  // Reset on keyup
     cancelHold();
   }
 });
@@ -224,7 +267,8 @@ document.addEventListener('keydown', (e) => {
     // Manually complete the current task
     const currentTaskText = todos[0]?.text?.trim();
     if (currentTaskText) {
-      window.acuity.completeTodo(currentTaskText).then(() => {
+      const duration = taskStartTime ? Date.now() - taskStartTime : null;
+      window.acuity.completeTodo(currentTaskText, duration).then(() => {
         // Trigger the same logic as onTaskCompleted
         if (todos.length > 1) {
           const completedTodo = todos.shift();
@@ -234,6 +278,7 @@ document.addEventListener('keydown', (e) => {
           const nextTodo = todos[0];
           window.acuity.setTask(nextTodo.text);
           lockedinTask.textContent = nextTodo.text;
+          taskStartTime = Date.now();  // Reset start time for next task
         } else {
           // Exit locked-in mode
           exitLockedInMode();
@@ -250,6 +295,7 @@ document.addEventListener('keydown', (e) => {
 // Exit locked-in mode and focus first todo
 function exitLockedInMode() {
   isLockedIn = false;
+  taskStartTime = null;  // Clear start time when exiting without completing
   window.acuity.stopTracking();
   topBar.classList.remove('locked-in');
   goalBar.classList.remove('locked-in');
@@ -344,14 +390,62 @@ reportBtn.addEventListener('click', async () => {
   resizeReportPanel();
 });
 
+function getDateRangeStart(range) {
+  const now = new Date();
+  switch (range) {
+    case 'today':
+      return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    case 'week':
+      const weekAgo = new Date(now);
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      return weekAgo;
+    case 'month':
+      const monthAgo = new Date(now);
+      monthAgo.setMonth(monthAgo.getMonth() - 1);
+      return monthAgo;
+    case 'all':
+    default:
+      return new Date(0);  // Beginning of time
+  }
+}
+
+function formatDuration(ms) {
+  if (ms == null || ms === 0) return '0m';
+  const totalSeconds = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  } else if (minutes > 0) {
+    return `${minutes}m ${seconds}s`;
+  } else {
+    return `${seconds}s`;
+  }
+}
+
 async function refreshReport() {
   const history = await window.acuity.getHistory();
-  const focusObservations = history.filter(
+  const completed = await window.acuity.getCompletedTasks();
+
+  const rangeStart = getDateRangeStart(reportDateRange);
+
+  // Filter by date range
+  const filteredCompleted = completed.filter(t => new Date(t.timestamp) >= rangeStart);
+  const filteredHistory = history.filter(h => new Date(h.timestamp) >= rangeStart);
+
+  // Calculate time stats from completed tasks
+  const tasksWithDuration = filteredCompleted.filter(t => t.duration != null);
+  const totalTimeMs = tasksWithDuration.reduce((sum, t) => sum + t.duration, 0);
+  const avgTimeMs = tasksWithDuration.length > 0 ? totalTimeMs / tasksWithDuration.length : 0;
+
+  // Get observations with task association
+  const focusObservations = filteredHistory.filter(
     item => item.type === 'observation' && item.onTask !== null
   );
-  const total = focusObservations.length;
 
-  if (total === 0) {
+  if (filteredCompleted.length === 0) {
     reportStats.innerHTML = `
       <p class="report-empty">No focus data yet.</p>
       <p class="report-empty-hint">Click Start, then Lock in to begin tracking your focus. Your report will build as you work.</p>
@@ -359,23 +453,68 @@ async function refreshReport() {
     return;
   }
 
-  const onTaskCount = focusObservations.filter(i => i.onTask === true).length;
-  const offTaskCount = focusObservations.filter(i => i.onTask === false).length;
-  const onTaskPct = (onTaskCount / total * 100).toFixed(1);
-  const offTaskPct = (offTaskCount / total * 100).toFixed(1);
-
-  console.log('Report data:', { total, onTaskCount, offTaskCount, onTaskPct, offTaskPct });
-
-  reportStats.innerHTML = `
-    <div class="report-bar">
-      <div class="report-bar-fill" style="width: ${onTaskPct}%;"></div>
+  // Build summary stats
+  let html = `
+    <div class="report-time-stats">
+      <div class="time-stat">
+        <span class="time-value">${formatDuration(totalTimeMs)}</span>
+        <span class="time-label">Total focused time</span>
+      </div>
+      <div class="time-stat">
+        <span class="time-value">${filteredCompleted.length}</span>
+        <span class="time-label">Tasks completed</span>
+      </div>
+      <div class="time-stat">
+        <span class="time-value">${formatDuration(avgTimeMs)}</span>
+        <span class="time-label">Avg per task</span>
+      </div>
     </div>
-    <div class="report-labels">
-      <span class="report-label on-task">On Task: ${onTaskPct}%</span>
-      <span class="report-label off-task">Off Task: ${offTaskPct}%</span>
-    </div>
-    <p class="report-note">Based on ${total} check${total !== 1 ? 's' : ''} while locked in</p>
   `;
+
+  // Build per-task breakdown (most recent first)
+  html += '<div class="task-breakdown">';
+
+  const sortedTasks = [...filteredCompleted].reverse();
+
+  for (const task of sortedTasks) {
+    // Find observations for this task
+    const taskObservations = focusObservations.filter(obs => obs.task === task.task);
+    const totalObs = taskObservations.length;
+    const onTaskObs = taskObservations.filter(o => o.onTask === true).length;
+    const offTaskObs = taskObservations.filter(o => o.onTask === false).length;
+    const onTaskPct = totalObs > 0 ? (onTaskObs / totalObs * 100).toFixed(0) : 100;
+    const offTaskPct = totalObs > 0 ? (offTaskObs / totalObs * 100).toFixed(0) : 0;
+
+    const duration = task.duration ? formatDuration(task.duration) : '--';
+    const completedTime = new Date(task.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    html += `
+      <div class="task-card">
+        <div class="task-card-header">
+          <span class="task-card-name">${escapeHtml(task.task)}</span>
+          <span class="task-card-time">${duration}</span>
+        </div>
+        <div class="task-card-bar">
+          <div class="task-card-bar-fill" style="width: ${onTaskPct}%;"></div>
+        </div>
+        <div class="task-card-footer">
+          <span class="task-card-pct on-task">${onTaskPct}% focused</span>
+          <span class="task-card-pct off-task">${offTaskPct}% distracted</span>
+          <span class="task-card-completed">${completedTime}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  html += '</div>';
+
+  reportStats.innerHTML = html;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 
 // Calculate and resize window to fit report content
@@ -533,10 +672,12 @@ window.acuity.onTaskCompleted((result) => {
     goalBar.classList.add('locked-in');
     // Show next task in locked-in task display
     lockedinTask.textContent = nextTask;
+    taskStartTime = Date.now();  // Reset start time for next task
     updateTodoVisibility();
   } else {
     // No next todo or only one - exit locked-in mode and create new empty todo
     isLockedIn = false;
+    taskStartTime = null;  // Clear start time
     window.acuity.stopTracking();
     window.acuity.setTask('');
     topBar.classList.remove('locked-in');
@@ -686,6 +827,7 @@ function renderTodoItem(todo) {
             const task = topTodo.text.trim();
 
             // Enter locked-in mode
+            taskStartTime = Date.now();  // Track when task started
             window.acuity.setTask(task);
             window.acuity.startTracking();
             isLockedIn = true;
@@ -724,8 +866,9 @@ function renderTodoItem(todo) {
       e.preventDefault();
       const taskText = todo.text.trim();
       if (taskText) {
-        // Add to completed history
-        window.acuity.completeTodo(taskText);
+        // Add to completed history with duration if tracked
+        const duration = taskStartTime ? Date.now() - taskStartTime : null;
+        window.acuity.completeTodo(taskText, duration);
       }
       // Remove from list
       todos = todos.filter(t => t.id !== todo.id);
@@ -816,6 +959,16 @@ window.acuity.onOffTaskLevel((level) => {
   if (level >= 2) {
     topBar.setAttribute('data-off-task-level', level);
   }
+});
+
+// Date range button handlers
+document.querySelectorAll('.date-range-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.date-range-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    reportDateRange = btn.dataset.range;
+    refreshReport();
+  });
 });
 
 // Initialize: create one empty todo item with focus
