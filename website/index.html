@@ -24,7 +24,7 @@
         <p class="download-links">
             <a href="https://github.com/delanoklee/aquwity2/releases/latest/download/aquwity-win32-x64-1.0.0.zip">Windows</a> |
             <a href="https://github.com/delanoklee/aquwity2/releases/latest/download/aquwity_1.0.0_amd64.deb">Linux</a> |
-            <span class="coming-soon">macOS (coming soon)</span>
+            <a href="https://github.com/delanoklee/aquwity2/releases/latest/download/aquwity-darwin-x64-1.0.0.zip">macOS</a>
         </p>
     </main>
     <script>
@@ -36,9 +36,8 @@
             btn.textContent = 'Download for Windows';
             btn.href = 'https://github.com/delanoklee/aquwity2/releases/latest/download/aquwity-win32-x64-1.0.0.zip';
         } else if (ua.includes('mac')) {
-            btn.textContent = 'Download for macOS (Coming Soon)';
-            btn.href = '#';
-            btn.classList.add('disabled');
+            btn.textContent = 'Download for macOS';
+            btn.href = 'https://github.com/delanoklee/aquwity2/releases/latest/download/aquwity-darwin-x64-1.0.0.zip';
         } else if (ua.includes('linux')) {
             btn.textContent = 'Download for Linux';
             btn.href = 'https://github.com/delanoklee/aquwity2/releases/latest/download/aquwity_1.0.0_amd64.deb';
