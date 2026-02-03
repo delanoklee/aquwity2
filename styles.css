@@ -125,6 +125,24 @@ body {
   display: none;
 }
 
+/* Hold progress ring */
+#hold-progress-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  pointer-events: none;
+}
+
+#hold-progress-circle {
+  transition: stroke-dashoffset 0.05s linear;
+}
+
+#top-bar.locked-in #hold-progress-ring #hold-progress-circle {
+  stroke: #fff;
+}
+
 #lockedin-task {
   display: none;
   flex: 1;

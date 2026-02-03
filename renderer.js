@@ -27,6 +27,58 @@ let isLogoDropdownOpen = false;
 let todos = [];
 let currentGoal = localStorage.getItem('acuity-goal') || '';
 
+// Hold-to-confirm state
+let holdTimer = null;
+let holdStartTime = null;
+let holdAnimationFrame = null;
+const HOLD_DURATION = 1000; // 1 second
+
+function startHold(onComplete) {
+  holdStartTime = Date.now();
+  showHoldIndicator(true);
+
+  function animate() {
+    const elapsed = Date.now() - holdStartTime;
+    const progress = Math.min(elapsed / HOLD_DURATION, 1);
+    updateHoldProgress(progress);
+
+    if (progress >= 1) {
+      cancelHold();
+      onComplete();
+    } else {
+      holdAnimationFrame = requestAnimationFrame(animate);
+    }
+  }
+
+  holdAnimationFrame = requestAnimationFrame(animate);
+}
+
+function cancelHold() {
+  if (holdAnimationFrame) {
+    cancelAnimationFrame(holdAnimationFrame);
+    holdAnimationFrame = null;
+  }
+  holdStartTime = null;
+  showHoldIndicator(false);
+  updateHoldProgress(0);
+}
+
+function showHoldIndicator(show) {
+  const ring = document.getElementById('hold-progress-ring');
+  if (ring) {
+    ring.style.display = show ? 'block' : 'none';
+  }
+}
+
+function updateHoldProgress(progress) {
+  const circle = document.getElementById('hold-progress-circle');
+  if (circle) {
+    const circumference = 2 * Math.PI * 18; // radius = 18
+    const offset = circumference * (1 - progress);
+    circle.style.strokeDashoffset = offset;
+  }
+}
+
 // Calculate base window height (top bar + goal bar if visible)
 function getBaseHeight() {
   const topBarHeight = topBar.offsetHeight || 50;
@@ -144,10 +196,22 @@ window.addEventListener('blur', () => {
   }
 });
 
-// Backspace exits locked-in mode
+// Backspace exits locked-in mode (hold to confirm)
+let backspaceHoldActive = false;
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Backspace' && isLockedIn) {
-    exitLockedInMode();
+  if (e.key === 'Backspace' && isLockedIn && !backspaceHoldActive) {
+    e.preventDefault();
+    backspaceHoldActive = true;
+    startHold(() => {
+      exitLockedInMode();
+    });
+  }
+});
+
+document.addEventListener('keyup', (e) => {
+  if (e.key === 'Backspace' && backspaceHoldActive) {
+    backspaceHoldActive = false;
+    cancelHold();
   }
 });
 
@@ -582,7 +646,7 @@ function renderTodoItem(todo) {
     <span class="todo-drag-handle">⠿</span>
     <div class="todo-item-wrapper">
       <input type="text" class="todo-item-input" value="${todo.text}" placeholder="What are you working on?" />
-      <span class="todo-item-hint">enter to lock in · shift+enter new item</span>
+      <span class="todo-item-hint">hold enter to lock in · shift+enter new item</span>
     </div>
     <button class="todo-delete">✕</button>
   `;
@@ -593,6 +657,9 @@ function renderTodoItem(todo) {
   input.addEventListener('input', () => {
     todo.text = input.value;
   });
+
+  // Track Enter hold state per input
+  let enterHoldActive = false;
 
   // Handle Enter, Shift+Enter, and Backspace
   input.addEventListener('keydown', (e) => {
@@ -610,25 +677,28 @@ function renderTodoItem(todo) {
         resizeTodoPanel();
         newInput.focus();
         newInput.setSelectionRange(0, 0);
-      } else {
-        // Enter: Lock in the top todo item
+      } else if (!enterHoldActive) {
+        // Enter: Hold to lock in the top todo item
         if (todos.length > 0 && todos[0].text.trim()) {
-          const topTodo = todos[0];
-          const task = topTodo.text.trim();
+          enterHoldActive = true;
+          startHold(() => {
+            const topTodo = todos[0];
+            const task = topTodo.text.trim();
 
-          // Enter locked-in mode
-          window.acuity.setTask(task);
-          window.acuity.startTracking();
-          isLockedIn = true;
-          topBar.classList.add('locked-in');
-          goalBar.classList.add('locked-in');
-          // Show current task in locked-in task display
-          lockedinTask.textContent = task;
-          updateTodoVisibility();
+            // Enter locked-in mode
+            window.acuity.setTask(task);
+            window.acuity.startTracking();
+            isLockedIn = true;
+            topBar.classList.add('locked-in');
+            goalBar.classList.add('locked-in');
+            // Show current task in locked-in task display
+            lockedinTask.textContent = task;
+            updateTodoVisibility();
+          });
         }
       }
     }
-    if (e.key === 'Backspace' && input.value === '') {
+    if (e.key === 'Backspace' && input.value === '' && !enterHoldActive) {
       e.preventDefault();
       // Don't delete if this is the only item
       if (todos.length <= 1) {
@@ -665,6 +735,14 @@ function renderTodoItem(todo) {
         createEmptyTodo();
       }
       resizeTodoPanel();
+    }
+  });
+
+  // Cancel Enter hold on keyup
+  input.addEventListener('keyup', (e) => {
+    if (e.key === 'Enter' && enterHoldActive) {
+      enterHoldActive = false;
+      cancelHold();
     }
   });
 
