@@ -61,11 +61,21 @@ function createWindow() {
   mainWindow.setVisibleOnAllWorkspaces(true);
 }
 
-async function captureAllScreens() {
+async function captureAllScreens(windowToHide) {
+  // Temporarily make window invisible for capture
+  if (windowToHide) {
+    windowToHide.setOpacity(0);
+  }
+
   const sources = await desktopCapturer.getSources({
     types: ['screen'],
     thumbnailSize: { width: 1920, height: 1080 }
   });
+
+  // Restore window visibility
+  if (windowToHide) {
+    windowToHide.setOpacity(1);
+  }
 
   const screenshots = [];
   for (const source of sources) {
@@ -106,13 +116,12 @@ async function analyzeBatch(buffer) {
 
 Task: "${currentTask}"
 
-IMPORTANT: Ignore the task bar overlay at the very top of the screen - that's the app's UI.
-
 Determine if the user's current activity matches their task:
 - Match SEMANTICALLY, not literally (task "watching youtube" matches activity "viewing a YouTube video")
 - Look at: window titles, URLs, visible content, applications in use
 - No motion between frames = READING/THINKING (on-task if content is relevant)
 - When ambiguous, lean toward on-task
+- IGNORE any UI overlay with "ACUITY" text or 🔒 lock icons - this is a focus app, not the user's work
 
 Return ONLY raw JSON:
 {
@@ -204,8 +213,8 @@ Respond with JSON only, no markdown: {"activity": "specific granular description
 async function performCheck() {
   console.log('Capturing screenshot...');
 
-  // Capture new screenshots
-  const currentScreenshot = await captureAllScreens();
+  // Capture new screenshots (hide mainWindow during capture)
+  const currentScreenshot = await captureAllScreens(mainWindow);
   screenshotBuffer.push(currentScreenshot);
   console.log(`Captured ${currentScreenshot.length} screen(s)`);
 
@@ -260,12 +269,16 @@ async function performCheck() {
         offTaskCount++;
         console.log('Off-task count:', offTaskCount);
 
-        if (offTaskCount === 1) {
+        if (offTaskCount === 3) {
           // First off-task: bring window to top and start animation
           mainWindow.setAlwaysOnTop(true);
           mainWindow.webContents.send('off-task-level', true);  // start animation
         }
-        // Don't send on every off-task response - only on the first one
+
+        // Notify renderer when animation reaches fully red (90 seconds)
+        if (offTaskCount === 90) {
+          mainWindow.webContents.send('off-task-fully-red', true);
+        }
       }
     }
 
@@ -311,6 +324,8 @@ function stopTracking() {
     clearInterval(trackingInterval);
     trackingInterval = null;
   }
+  // Clean up off-task state
+  offTaskCount = 0;
 }
 
 // IPC handlers
