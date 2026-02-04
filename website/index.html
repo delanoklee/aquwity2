@@ -22,26 +22,60 @@
             A simple, distraction-free focus app that helps you stay on track.
         </p>
         <p class="download-links">
-            <a href="https://github.com/delanoklee/aquwity2/releases/latest/download/aquwity.exe">Windows</a> |
-            <a href="https://github.com/delanoklee/aquwity2/releases/latest/download/aquwity_1.1.2_amd64.deb">Linux</a> |
-            <a href="https://github.com/delanoklee/aquwity2/releases/latest/download/aquwity-1.1.2-arm64.dmg">macOS</a>
+            <a id="link-windows" href="#">Windows</a> |
+            <a id="link-linux" href="#">Linux</a> |
+            <a id="link-macos" href="#">macOS</a>
         </p>
     </main>
     <script>
-        // Detect OS and update download button
-        const btn = document.getElementById('download-btn');
-        const ua = navigator.userAgent.toLowerCase();
+        // Fetch latest release from GitHub API and set download links
+        const REPO = 'delanoklee/aquwity2';
 
-        if (ua.includes('win')) {
-            btn.textContent = 'Download for Windows';
-            btn.href = 'https://github.com/delanoklee/aquwity2/releases/latest/download/aquwity.exe';
-        } else if (ua.includes('mac')) {
-            btn.textContent = 'Download for macOS';
-            btn.href = 'https://github.com/delanoklee/aquwity2/releases/latest/download/aquwity-1.1.2-arm64.dmg';
-        } else if (ua.includes('linux')) {
-            btn.textContent = 'Download for Linux';
-            btn.href = 'https://github.com/delanoklee/aquwity2/releases/latest/download/aquwity_1.1.2_amd64.deb';
+        async function setupDownloadLinks() {
+            try {
+                const response = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`);
+                const release = await response.json();
+
+                // Find assets by file extension/pattern
+                const assets = release.assets || [];
+                const windowsAsset = assets.find(a => a.name.endsWith('.exe'));
+                const linuxAsset = assets.find(a => a.name.endsWith('.deb'));
+                const macosAsset = assets.find(a => a.name.endsWith('.dmg'));
+
+                // Update individual download links
+                if (windowsAsset) document.getElementById('link-windows').href = windowsAsset.browser_download_url;
+                if (linuxAsset) document.getElementById('link-linux').href = linuxAsset.browser_download_url;
+                if (macosAsset) document.getElementById('link-macos').href = macosAsset.browser_download_url;
+
+                // Update main download button based on OS
+                const btn = document.getElementById('download-btn');
+                const ua = navigator.userAgent.toLowerCase();
+
+                if (ua.includes('win') && windowsAsset) {
+                    btn.textContent = 'Download for Windows';
+                    btn.href = windowsAsset.browser_download_url;
+                } else if (ua.includes('mac') && macosAsset) {
+                    btn.textContent = 'Download for macOS';
+                    btn.href = macosAsset.browser_download_url;
+                } else if (ua.includes('linux') && linuxAsset) {
+                    btn.textContent = 'Download for Linux';
+                    btn.href = linuxAsset.browser_download_url;
+                } else if (windowsAsset) {
+                    // Default to Windows if OS not detected
+                    btn.href = windowsAsset.browser_download_url;
+                }
+            } catch (error) {
+                console.error('Failed to fetch release info:', error);
+                // Fallback to generic releases page
+                const fallback = `https://github.com/${REPO}/releases/latest`;
+                document.getElementById('download-btn').href = fallback;
+                document.getElementById('link-windows').href = fallback;
+                document.getElementById('link-linux').href = fallback;
+                document.getElementById('link-macos').href = fallback;
+            }
         }
+
+        setupDownloadLinks();
     </script>
 </body>
 </html>
