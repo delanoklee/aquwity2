@@ -114,7 +114,11 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           echo "Testing notarytool authentication..."
-          xcrun notarytool history --apple-id "$APPLE_ID" --password "$APPLE_APP_PASSWORD" --team-id "$APPLE_TEAM_ID" || echo "Notarytool auth failed!"
+          xcrun notarytool history --apple-id "$APPLE_ID" --password "$APPLE_APP_PASSWORD" --team-id "$APPLE_TEAM_ID"
+
+          echo ""
+          echo "Checking details of most recent submission..."
+          xcrun notarytool info 255af467-133c-4956-9ad4-4486b2dce99c --apple-id "$APPLE_ID" --password "$APPLE_APP_PASSWORD" --team-id "$APPLE_TEAM_ID"
 
       - name: Install dependencies
         run: npm ci
