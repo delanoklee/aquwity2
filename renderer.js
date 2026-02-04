@@ -668,6 +668,8 @@ window.acuity.onTaskCompleted((result) => {
     const nextTask = nextTodo.text;
     window.acuity.setTask(nextTask);
     isLockedIn = true;
+    topBar.classList.remove('off-task-warning');
+    topBar.classList.remove('fully-red');
     topBar.classList.add('locked-in');
     goalBar.classList.add('locked-in');
     // Show next task in locked-in task display
@@ -681,6 +683,8 @@ window.acuity.onTaskCompleted((result) => {
     window.acuity.stopTracking();
     window.acuity.setTask('');
     topBar.classList.remove('locked-in');
+    topBar.classList.remove('off-task-warning');
+    topBar.classList.remove('fully-red');
     goalBar.classList.remove('locked-in');
     // Clear locked-in task display
     lockedinTask.textContent = '';
@@ -951,13 +955,20 @@ function createEmptyTodo() {
   return item;
 }
 
-// Listen for off-task warning levels
-window.acuity.onOffTaskLevel((level) => {
-  // Remove all warning levels
-  topBar.removeAttribute('data-off-task-level');
+// Listen for off-task warning state
+window.acuity.onOffTaskLevel((isOffTask) => {
+  if (isOffTask) {
+    topBar.classList.add('off-task-warning');
+  } else {
+    topBar.classList.remove('off-task-warning');
+    topBar.classList.remove('fully-red');
+  }
+});
 
-  if (level >= 2) {
-    topBar.setAttribute('data-off-task-level', level);
+// Listen for fully-red state (after 90 seconds off-task)
+window.acuity.onOffTaskFullyRed((isFullyRed) => {
+  if (isFullyRed) {
+    topBar.classList.add('fully-red');
   }
 });
 

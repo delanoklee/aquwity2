@@ -94,29 +94,25 @@ body {
   background: #1a1a2e;
 }
 
-/* Progressive off-task warning colors (levels 2-5) */
-#top-bar.locked-in[data-off-task-level="2"] {
-  background: #4a1a1a; /* Light red */
+/* Stepped off-task warning animation (6 sharp jumps over 90s = one jump every 15 seconds) */
+@keyframes off-task-steps {
+  0% { background: rgba(30, 30, 30, 0.95); }
+  100% { background: rgba(180, 30, 30, 0.95); }
 }
 
-#top-bar.locked-in[data-off-task-level="3"] {
-  background: #6b1a1a; /* Medium red */
+#top-bar.locked-in.off-task-warning {
+  animation: off-task-steps 90s steps(6, end) forwards;
+  transition: none;
 }
 
-#top-bar.locked-in[data-off-task-level="4"] {
-  background: #8b0000; /* Dark red */
+/* Pulse when fully red (after 90 seconds) */
+@keyframes red-pulse {
+  0%, 100% { background: rgba(180, 30, 30, 0.95); }
+  50% { background: rgba(220, 30, 30, 0.95); }
 }
 
-#top-bar.locked-in[data-off-task-level="5"] {
-  background: #a50000; /* Darkest/brightest red */
-}
-
-#top-bar.locked-in[data-off-task-level="6"] {
-  background: #c00000; /* Intense red */
-}
-
-#top-bar.locked-in[data-off-task-level="7"] {
-  background: #ff0000; /* Maximum red */
+#top-bar.locked-in.off-task-warning.fully-red {
+  animation: red-pulse 1s ease-in-out infinite;
 }
 
 #top-bar.locked-in #todo-list {
@@ -169,6 +165,22 @@ body {
 }
 
 #top-bar.locked-in #lockedin-tip {
+  display: block;
+}
+
+#acuity-marker {
+  display: none;
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+#top-bar.locked-in #acuity-marker {
   display: block;
 }
 
@@ -278,7 +290,7 @@ button {
 }
 
 .history-item.on-task {
-  border-left-color: #4CAF50;
+  border-left-color: #FFC107; /* yellow for dev testing */
 }
 
 .history-item.off-task {
@@ -301,7 +313,7 @@ button {
 }
 
 .history-item.on-task .history-status {
-  background: #4CAF50;
+  background: #FFC107; /* yellow for dev testing */
 }
 
 .history-item.off-task .history-status {

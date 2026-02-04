@@ -36,7 +36,7 @@ contextBridge.exposeInMainWorld('acuity', {
 
   getCompletedTasks: () => ipcRenderer.invoke('get-completed-tasks'),
 
-  completeTodo: (todoText) => ipcRenderer.invoke('complete-todo', todoText),
+  completeTodo: (todoText, duration) => ipcRenderer.invoke('complete-todo', todoText, duration),
 
   onTaskUpdated: (callback) => {
     ipcRenderer.on('task-updated', (event, task) => {
@@ -50,5 +50,9 @@ contextBridge.exposeInMainWorld('acuity', {
 
   onOffTaskLevel: (callback) => {
     ipcRenderer.on('off-task-level', (event, level) => callback(level));
+  },
+
+  onOffTaskFullyRed: (callback) => {
+    ipcRenderer.on('off-task-fully-red', (event, isFullyRed) => callback(isFullyRed));
   }
 });
