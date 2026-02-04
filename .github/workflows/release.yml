@@ -73,13 +73,39 @@ jobs:
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
 
-          # Import certificate to keychain
-          security import $RUNNER_TEMP/certificate.p12 -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          # Make this keychain the default and add to search list
+          security default-keychain -s $KEYCHAIN_PATH
           security list-keychain -d user -s $KEYCHAIN_PATH
+
+          # Import certificate with explicit tool access
+          security import $RUNNER_TEMP/certificate.p12 -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH -T /usr/bin/codesign -T /usr/bin/security
+
+          # Allow codesign to access the key without prompting
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
 
           # Clean up certificate file
           rm $RUNNER_TEMP/certificate.p12
+
+          # VERIFY the certificate is available for signing
+          echo "=== Available signing identities ==="
+          security find-identity -v -p codesigning
+
+      - name: Test codesign
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          # Create a simple test file
+          echo '#!/bin/bash' > /tmp/test.sh
+          chmod +x /tmp/test.sh
+
+          # Try to sign it
+          echo "Attempting to sign test file..."
+          codesign --force --sign "$APPLE_SIGNING_IDENTITY" --timestamp /tmp/test.sh
+
+          # Verify
+          echo "Verifying signature..."
+          codesign --verify --verbose /tmp/test.sh
+          echo "Test signing succeeded!"
 
       - name: Install dependencies
         run: npm ci
@@ -91,6 +117,7 @@ jobs:
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          KEYCHAIN_PATH: ${{ runner.temp }}/app-signing.keychain-db
           DEBUG: "electron-forge:*,electron-osx-sign:*,@electron/notarize:*,electron-packager:*"
         run: npm run publish
 
