@@ -90,6 +90,23 @@ jobs:
           echo "=== Available signing identities ==="
           security find-identity -v -p codesigning
 
+      - name: Test codesign
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          # Create a simple test file
+          echo '#!/bin/bash' > /tmp/test.sh
+          chmod +x /tmp/test.sh
+
+          # Try to sign it
+          echo "Attempting to sign test file..."
+          codesign --force --sign "$APPLE_SIGNING_IDENTITY" --timestamp /tmp/test.sh
+
+          # Verify
+          echo "Verifying signature..."
+          codesign --verify --verbose /tmp/test.sh
+          echo "Test signing succeeded!"
+
       - name: Install dependencies
         run: npm ci
 
