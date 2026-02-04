@@ -81,6 +81,12 @@ jobs:
           # Clean up certificate file
           rm $RUNNER_TEMP/certificate.p12
 
+          # VERIFY the certificate is available for signing
+          echo "=== Available signing identities ==="
+          security find-identity -v -p codesigning
+          echo "=== Checking for expected identity ==="
+          security find-identity -v -p codesigning | grep -c "Developer ID Application" || echo "WARNING: No Developer ID Application certificate found!"
+
       - name: Install dependencies
         run: npm ci
 
