@@ -1,17 +1,34 @@
 const { FusesPlugin } = require('@electron-forge/plugin-fuses');
 const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 
+const packagerConfig = {
+  asar: true,
+  icon: './icons/icon',
+  ignore: [
+    /^\/website$/,
+    /^\/\.git$/,
+    /^\/\.gitignore$/,
+    /^\/slider\.png$/,
+  ],
+};
+
+// Only add signing/notarization when credentials are available (CI)
+if (process.env.APPLE_SIGNING_IDENTITY) {
+  packagerConfig.osxSign = {
+    identity: process.env.APPLE_SIGNING_IDENTITY,
+    'hardened-runtime': true,
+    entitlements: 'entitlements.mac.plist',
+    'entitlements-inherit': 'entitlements.mac.plist',
+  };
+  packagerConfig.osxNotarize = {
+    appleId: process.env.APPLE_ID,
+    appleIdPassword: process.env.APPLE_APP_PASSWORD,
+    teamId: process.env.APPLE_TEAM_ID,
+  };
+}
+
 module.exports = {
-  packagerConfig: {
-    asar: true,
-    icon: './icons/icon',
-    ignore: [
-      /^\/website$/,
-      /^\/\.git$/,
-      /^\/\.gitignore$/,
-      /^\/slider\.png$/,
-    ],
-  },
+  packagerConfig,
   rebuildConfig: {},
   makers: [
     {
@@ -35,6 +52,7 @@ module.exports = {
     },
     {
       name: '@electron-forge/maker-dmg',
+      platforms: ['darwin'],
       config: {
         icon: './icons/icon.png',
       },
