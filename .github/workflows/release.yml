@@ -77,8 +77,8 @@ jobs:
           security default-keychain -s $KEYCHAIN_PATH
           security list-keychain -d user -s $KEYCHAIN_PATH
 
-          # Import certificate to keychain
-          security import $RUNNER_TEMP/certificate.p12 -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          # Import certificate with explicit tool access
+          security import $RUNNER_TEMP/certificate.p12 -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH -T /usr/bin/codesign -T /usr/bin/security
 
           # Allow codesign to access the key without prompting
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
@@ -89,8 +89,6 @@ jobs:
           # VERIFY the certificate is available for signing
           echo "=== Available signing identities ==="
           security find-identity -v -p codesigning
-          echo "=== Checking for expected identity ==="
-          security find-identity -v -p codesigning | grep -c "Developer ID Application" || echo "WARNING: No Developer ID Application certificate found!"
 
       - name: Install dependencies
         run: npm ci
