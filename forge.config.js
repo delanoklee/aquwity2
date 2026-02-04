@@ -21,11 +21,12 @@ if (process.env.APPLE_SIGNING_IDENTITY) {
     'entitlements-inherit': 'entitlements.mac.plist',
     keychain: process.env.KEYCHAIN_PATH,
   };
-  packagerConfig.osxNotarize = {
-    appleId: process.env.APPLE_ID,
-    appleIdPassword: process.env.APPLE_APP_PASSWORD,
-    teamId: process.env.APPLE_TEAM_ID,
-  };
+  // Temporarily disabled to test signing alone
+  // packagerConfig.osxNotarize = {
+  //   appleId: process.env.APPLE_ID,
+  //   appleIdPassword: process.env.APPLE_APP_PASSWORD,
+  //   teamId: process.env.APPLE_TEAM_ID,
+  // };
 }
 
 module.exports = {
