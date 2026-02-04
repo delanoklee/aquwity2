@@ -16,11 +16,13 @@ const packagerConfig = {
 if (process.env.APPLE_SIGNING_IDENTITY) {
   packagerConfig.osxSign = {
     identity: process.env.APPLE_SIGNING_IDENTITY,
-    'hardened-runtime': true,
+    hardenedRuntime: true,
     entitlements: 'entitlements.mac.plist',
     'entitlements-inherit': 'entitlements.mac.plist',
+    keychain: process.env.KEYCHAIN_PATH,
   };
   packagerConfig.osxNotarize = {
+    tool: 'notarytool',
     appleId: process.env.APPLE_ID,
     appleIdPassword: process.env.APPLE_APP_PASSWORD,
     teamId: process.env.APPLE_TEAM_ID,
