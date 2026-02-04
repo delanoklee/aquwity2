@@ -22,10 +22,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Create .env file
+      - name: Inject API key
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: echo "GEMINI_API_KEY=$GEMINI_API_KEY" > .env
+        run: sed -i "s/__GEMINI_API_KEY_PLACEHOLDER__/$GEMINI_API_KEY/g" main.js
 
       - name: Publish Linux
         env:
@@ -45,10 +45,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Create .env file
+      - name: Inject API key
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: echo "GEMINI_API_KEY=$GEMINI_API_KEY" > .env
+        run: (Get-Content main.js) -replace '__GEMINI_API_KEY_PLACEHOLDER__', $env:GEMINI_API_KEY | Set-Content main.js
+        shell: pwsh
 
       - name: Publish Windows
         env:
@@ -133,10 +134,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Create .env file
+      - name: Inject API key
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: echo "GEMINI_API_KEY=$GEMINI_API_KEY" > .env
+        run: sed -i '' "s/__GEMINI_API_KEY_PLACEHOLDER__/$GEMINI_API_KEY/g" main.js
 
       - name: Publish macOS
         env:

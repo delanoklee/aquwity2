@@ -1,8 +1,19 @@
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '.env') });
 const { app, BrowserWindow, desktopCapturer, ipcMain, screen, globalShortcut, Menu } = require('electron');
 const fs = require('fs');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+// API key is injected at build time by CI, or loaded from .env for local dev
+let GEMINI_API_KEY = '__GEMINI_API_KEY_PLACEHOLDER__';
+if (GEMINI_API_KEY === '__GEMINI_API_KEY_PLACEHOLDER__') {
+  // Local development - try to load from .env
+  try {
+    require('dotenv').config({ path: path.join(__dirname, '.env') });
+    GEMINI_API_KEY = GEMINI_API_KEY || '';
+  } catch (e) {
+    GEMINI_API_KEY = '';
+  }
+}
 
 // In-memory state
 let currentTask = "";
@@ -32,7 +43,7 @@ function saveCompletedTasks() {
 }
 
 // Initialize Gemini
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
@@ -92,7 +103,7 @@ async function analyzeBatch(buffer) {
     return { on: 0, activity: "No task specified" };
   }
 
-  if (!process.env.GEMINI_API_KEY) {
+  if (!GEMINI_API_KEY) {
     return { on: 0, activity: "API key not configured" };
   }
 
@@ -156,7 +167,7 @@ Examples:
 }
 
 async function analyzeActivityObserveMode(buffer) {
-  if (!process.env.GEMINI_API_KEY) {
+  if (!GEMINI_API_KEY) {
     return { activity: "API key not configured" };
   }
 
@@ -382,7 +393,7 @@ ipcMain.handle('complete-todo', (event, todoText, duration) => {
 });
 
 ipcMain.handle('categorize-activities', async (event, activities) => {
-  if (!process.env.GEMINI_API_KEY || activities.length === 0) {
+  if (!GEMINI_API_KEY || activities.length === 0) {
     return {};
   }
 
