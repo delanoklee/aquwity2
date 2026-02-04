@@ -6,7 +6,7 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 // In-memory state
 let currentTask = "";
-let screenshotBuffer = []; // Holds up to 3 screenshots for batch analysis
+let screenshotBuffer = []; // Holds screenshot for analysis
 let history = [];
 let trackingInterval = null;
 let mainWindow = null;
@@ -14,6 +14,7 @@ let interventionWindow = null;
 let completedTasks = [];
 let completedTasksPath = null;
 let offTaskCount = 0;
+let taskStartTime = null;  // Track when the current task was started
 const focusEnabled = true;
 
 function loadCompletedTasks() {
@@ -101,31 +102,28 @@ async function analyzeBatch(buffer) {
       }
     }
 
-    const prompt = `Context:
-Target Task: "${currentTask}"
+    const prompt = `You are checking if a user is actively working on their stated task.
 
-Input:
-3 screenshots provided.
+Task: "${currentTask}"
 
-Instructions:
-1. Analyze the screenshots to determine if the user is working on the "Target Task".
-2. Read window titles, file names, URL bars, and visible code/text.
-3. If there is no visual change (motion) between frames, assume the user is READING or THINKING. Do not mark them as "off task" solely due to lack of motion.
-4. If the user is on a relevant site (e.g., StackOverflow, Docs) but the specific page is unrelated to the task (e.g., reading about "Cooking" when the task is "Coding"), mark as off task (0).
+IMPORTANT: Ignore the task bar overlay at the very top of the screen - that's the app's UI.
 
-Output Format:
-Return ONLY a raw JSON object (no markdown formatting).
+Determine if the user's current activity matches their task:
+- Match SEMANTICALLY, not literally (task "watching youtube" matches activity "viewing a YouTube video")
+- Look at: window titles, URLs, visible content, applications in use
+- No motion between frames = READING/THINKING (on-task if content is relevant)
+- When ambiguous, lean toward on-task
+
+Return ONLY raw JSON:
 {
-  "on": 0 or 1,
-  "activity": "The specific granular activity"
+  "on": 1 if activity matches task, 0 if clearly unrelated,
+  "activity": "specific description with quoted text from screen"
 }
 
-Activity Granularity Rules:
-- You must quote specific text found on the screen.
-- BAD: "Reading documentation"
-- GOOD: "Reading the 'Authentication' section of Stripe API docs"
-- BAD: "Coding"
-- GOOD: "Editing the 'captureScreens' function in main.js around line 45"`;
+Examples:
+- Task "watch youtube" + YouTube open = on:1
+- Task "write code" + VS Code with code visible = on:1
+- Task "write code" + browsing Reddit = on:0`;
 
     const result = await model.generateContent([prompt, ...imageParts]);
     const response = await result.response;
@@ -137,14 +135,14 @@ Activity Granularity Rules:
       const parsed = JSON.parse(jsonMatch[0]);
       // Normalize the response
       return {
-        on: parsed.on === 1 || parsed.on === true ? 1 : 0,
+        onTask: parsed.on === 1 || parsed.on === true,
         activity: parsed.activity || "Unknown activity"
       };
     }
-    return { on: 0, activity: "Could not parse response" };
+    return { onTask: false, activity: "Could not parse response" };
   } catch (error) {
     console.error('Gemini API error:', error);
-    return { on: 0, activity: `API error: ${error.message}` };
+    return { onTask: false, activity: `API error: ${error.message}` };
   }
 }
 
@@ -209,12 +207,12 @@ async function performCheck() {
   // Capture new screenshots
   const currentScreenshot = await captureAllScreens();
   screenshotBuffer.push(currentScreenshot);
-  console.log(`Captured ${currentScreenshot.length} screen(s), buffer size: ${screenshotBuffer.length}/3`);
+  console.log(`Captured ${currentScreenshot.length} screen(s)`);
 
-  // Only analyze when we have 3 screenshots (every 3 seconds)
-  if (screenshotBuffer.length >= 3) {
+  // Analyze immediately (every second)
+  if (screenshotBuffer.length >= 1) {
     const checkingFocus = focusEnabled && currentTask && currentTask.trim();
-    console.log('Analyzing batch...', checkingFocus ? '(focus enabled)' : '(observe only)');
+    console.log('Analyzing screenshot...', checkingFocus ? '(focus enabled)' : '(observe only)');
 
     let result;
     if (checkingFocus) {
@@ -238,7 +236,8 @@ async function performCheck() {
       timestamp: new Date().toISOString(),
       type: 'observation',
       activity: result.activity,
-      onTask: result.onTask
+      onTask: result.onTask,
+      task: currentTask  // Track which task this observation belongs to
     };
     history.push(entry);
 
@@ -254,7 +253,7 @@ async function performCheck() {
         // Reset when back on-task
         if (offTaskCount > 0) {
           mainWindow.setAlwaysOnTop(false);
-          mainWindow.webContents.send('off-task-level', 0);
+          mainWindow.webContents.send('off-task-level', false);  // on-task
         }
         offTaskCount = 0;
       } else {
@@ -262,13 +261,11 @@ async function performCheck() {
         console.log('Off-task count:', offTaskCount);
 
         if (offTaskCount === 1) {
-          // First warning: bring window to top
+          // First off-task: bring window to top and start animation
           mainWindow.setAlwaysOnTop(true);
-          mainWindow.webContents.send('off-task-level', 1);
-        } else if (offTaskCount >= 2) {
-          // Progressive red warning (cap at 5)
-          mainWindow.webContents.send('off-task-level', Math.min(offTaskCount, 7));
+          mainWindow.webContents.send('off-task-level', true);  // start animation
         }
+        // Don't send on every off-task response - only on the first one
       }
     }
 
@@ -280,7 +277,7 @@ async function performCheck() {
 }
 
 function getCheckInterval() {
-  // 1 second when locked in (batch analyzed every 3 captures), 3 minutes when not
+  // 1 second when locked in, 3 minutes when not
   return focusEnabled ? 1 * 1000 : 3 * 60 * 1000;
 }
 
@@ -290,7 +287,7 @@ function updateTrackingInterval() {
   clearInterval(trackingInterval);
   screenshotBuffer = []; // Reset buffer when interval changes
   trackingInterval = setInterval(performCheck, getCheckInterval());
-  console.log(`Interval updated: ${focusEnabled ? '1 second (batch every 3s)' : '3 minutes'}`);
+  console.log(`Interval updated: ${focusEnabled ? '1 second' : '3 minutes'}`);
 }
 
 function startTracking() {
@@ -306,7 +303,7 @@ function startTracking() {
 
   // Set up interval based on focus mode
   trackingInterval = setInterval(performCheck, getCheckInterval());
-  console.log(`Interval set: ${focusEnabled ? '1 second (batch every 3s)' : '3 minutes'}`);
+  console.log(`Interval set: ${focusEnabled ? '1 second' : '3 minutes'}`);
 }
 
 function stopTracking() {
@@ -327,10 +324,12 @@ ipcMain.handle('get-history', () => {
 });
 
 ipcMain.on('start-tracking', () => {
+  taskStartTime = Date.now();  // Track when task started
   startTracking();
 });
 
 ipcMain.on('stop-tracking', () => {
+  taskStartTime = null;  // Clear start time when tracking stops
   stopTracking();
 });
 
@@ -354,12 +353,13 @@ ipcMain.handle('get-completed-tasks', () => {
   return completedTasks;
 });
 
-ipcMain.handle('complete-todo', (event, todoText) => {
+ipcMain.handle('complete-todo', (event, todoText, duration) => {
   const completedTask = {
     timestamp: new Date().toISOString(),
     task: todoText,
     type: 'completed',
-    source: 'todo'
+    source: 'todo',
+    duration: duration  // milliseconds, or null if not tracked
   };
   completedTasks.push(completedTask);
   saveCompletedTasks();
@@ -491,16 +491,25 @@ app.whenReady().then(() => {
   const registered = globalShortcut.register('CommandOrControl+Shift+D', () => {
     console.log('Ctrl+Shift+D pressed, currentTask:', currentTask);
     if (currentTask && currentTask.trim()) {
+      const duration = taskStartTime ? Date.now() - taskStartTime : null;
       const completedTask = {
         timestamp: new Date().toISOString(),
         task: currentTask,
-        type: 'completed'
+        type: 'completed',
+        duration: duration  // milliseconds, or null if not tracked
       };
       completedTasks.push(completedTask);
       saveCompletedTasks();
       console.log('Sending task-completed to renderer:', completedTask);
       mainWindow.webContents.send('task-completed', completedTask);
+      // Reset off-task warning state
+      if (offTaskCount > 0) {
+        mainWindow.setAlwaysOnTop(false);
+        mainWindow.webContents.send('off-task-level', false);
+      }
+      offTaskCount = 0;
       currentTask = '';
+      taskStartTime = null;  // Reset after completing
     } else {
       console.log('No task to complete');
     }
