@@ -16,7 +16,7 @@
         <div id="goal-bar">
           <input type="text" id="goal-input" placeholder="Goal" />
           <span id="goal-display" class="hidden"></span>
-          <span id="goal-tooltip">Change your goal in settings</span>
+          <span id="goal-tooltip">Go to settings to change your goal</span>
         </div>
         <div id="top-bar">
           <span id="acuity-marker">🔒 ACUITY 🔒</span>
@@ -40,8 +40,10 @@
       <div id="goal-panel" class="hidden">
         <div id="goal-panel-content">
           <p id="goal-panel-header">Edit Goal</p>
-          <input type="text" id="goal-panel-input" placeholder="What's your main goal?" />
-          <button id="goal-save-btn">Save</button>
+          <div id="goal-panel-input-wrapper">
+            <input type="text" id="goal-panel-input" placeholder="What's your main goal?" />
+            <span id="goal-panel-hint">Press Enter to save</span>
+          </div>
         </div>
       </div>
       <div id="history-panel" class="hidden">

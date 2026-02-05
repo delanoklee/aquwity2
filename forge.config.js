@@ -18,7 +18,7 @@ if (process.env.APPLE_SIGNING_IDENTITY) {
     identity: process.env.APPLE_SIGNING_IDENTITY,
     hardenedRuntime: true,
     entitlements: 'entitlements.mac.plist',
-    'entitlements-inherit': 'entitlements.mac.plist',
+    'entitlements-inherit': 'entitlements.mac.inherit.plist',
     keychain: process.env.KEYCHAIN_PATH,
   };
   packagerConfig.osxNotarize = {

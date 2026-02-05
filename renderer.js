@@ -14,7 +14,6 @@ const goalInput = document.getElementById('goal-input');
 const goalBtn = document.getElementById('goal-btn');
 const goalPanel = document.getElementById('goal-panel');
 const goalPanelInput = document.getElementById('goal-panel-input');
-const goalSaveBtn = document.getElementById('goal-save-btn');
 const reportRefreshBtn = document.getElementById('report-refresh-btn');
 const reportChart = document.getElementById('report-chart');
 const lockedinTask = document.getElementById('lockedin-task');
@@ -95,7 +94,7 @@ if (currentGoal) {
   goalInput.classList.add('hidden');
   goalDisplay.classList.remove('hidden');
   goalDisplay.textContent = currentGoal;
-  goalDisplay.title = 'go to settings to edit goal';
+  goalDisplay.title = 'Go to settings to change your goal';
 } else {
   // Show input state
   goalInput.classList.remove('hidden');
@@ -118,7 +117,7 @@ function lockInGoal(text) {
   goalInput.classList.add('hidden');
   goalDisplay.classList.remove('hidden');
   goalDisplay.textContent = currentGoal;
-  goalDisplay.title = 'go to settings to edit goal';
+  goalDisplay.title = 'Go to settings to change your goal';
 }
 
 // Goal button in dropdown - open goal panel
@@ -143,25 +142,20 @@ goalBtn.addEventListener('click', () => {
   goalPanel.classList.remove('hidden');
   goalPanelInput.value = currentGoal;
   goalPanelInput.focus();
-  window.acuity.resizeWindow(getBaseHeight() + 120);
-});
-
-// Goal panel save button
-goalSaveBtn.addEventListener('click', () => {
-  const newGoal = goalPanelInput.value.trim();
-  if (newGoal) {
-    lockInGoal(newGoal);
-  }
-  isGoalPanelOpen = false;
-  goalPanel.classList.add('hidden');
-  updateTodoVisibility();
+  window.acuity.resizeWindow(getBaseHeight() + 70);
 });
 
 // Goal panel input - save on Enter
 goalPanelInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     e.preventDefault();
-    goalSaveBtn.click();
+    const newGoal = goalPanelInput.value.trim();
+    if (newGoal) {
+      lockInGoal(newGoal);
+    }
+    isGoalPanelOpen = false;
+    goalPanel.classList.add('hidden');
+    updateTodoVisibility();
   }
 });
 
@@ -764,10 +758,9 @@ function resizeTodoPanel() {
 
   // Measure actual heights from DOM
   const goalBarHeight = goalBar.classList.contains('hidden') ? 0 : goalBar.offsetHeight;
-  const topBarPadding = 16; // 8px top + 8px bottom
-  const todoListHeight = todoList.scrollHeight;
+  const topBarHeight = topBar.offsetHeight;
 
-  const totalHeight = goalBarHeight + topBarPadding + todoListHeight;
+  const totalHeight = goalBarHeight + topBarHeight;
 
   window.acuity.resizeWindow(Math.min(totalHeight, maxWindowHeight));
 }
@@ -790,7 +783,7 @@ function renderTodoItem(todo) {
   div.innerHTML = `
     <span class="todo-drag-handle">⠿</span>
     <div class="todo-item-wrapper">
-      <input type="text" class="todo-item-input" value="${todo.text}" placeholder="What are you working on?" />
+      <input type="text" class="todo-item-input" value="${todo.text}" placeholder="What do you want to accomplish?" />
       <span class="todo-item-hint">hold enter to lock in · shift+enter new item</span>
     </div>
     <button class="todo-delete">✕</button>
@@ -827,6 +820,7 @@ function renderTodoItem(todo) {
         if (todos.length > 0 && todos[0].text.trim()) {
           enterHoldActive = true;
           startHold(() => {
+            enterHoldActive = false;  // Reset before hiding - keyup may not fire on hidden element
             const topTodo = todos[0];
             const task = topTodo.text.trim();
 

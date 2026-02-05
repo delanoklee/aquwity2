@@ -9,6 +9,7 @@ body {
   background: transparent;
   color: #eee;
   overflow: hidden;
+  letter-spacing: 0.5px;
 }
 
 #app {
@@ -25,13 +26,12 @@ body {
 }
 
 #goal-bar {
-  background: #5D7A8C;
+  background: #1a1a2e;
   color: white;
   padding: 2px 8px;
   font-size: 10px;
   font-weight: bold;
   text-align: center;
-  -webkit-app-region: drag;
   transition: padding 0.2s, font-size 0.2s, opacity 0.2s;
   display: flex;
   justify-content: center;
@@ -47,6 +47,7 @@ body {
   flex: 1;
   text-align: center;
   cursor: default;
+  text-transform: uppercase;
 }
 
 #goal-display.hidden {
@@ -82,10 +83,9 @@ body {
   align-items: center;
   padding: 8px 12px 16px 12px;
   gap: 10px;
-  background: #E5D5B5;
+  background: white;
   min-height: 70px;
   flex-shrink: 0;
-  -webkit-app-region: drag;
   position: relative;
   transition: background 0.2s;
 }
@@ -387,7 +387,7 @@ button {
 #goal-panel {
   flex: 1;
   background: #E5D5B5;
-  padding: 12px;
+  padding: 8px 12px;
   display: flex;
   flex-direction: column;
   border-radius: 0 0 8px 8px;
@@ -400,24 +400,24 @@ button {
 #goal-panel-content {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 #goal-panel-header {
   color: #5D7A8C;
-  font-size: 15px;
+  font-size: 13px;
   text-align: left;
 }
 
 #goal-panel-input {
   width: 100%;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border: none;
   border-radius: 4px;
   background: #D4C4A8;
   color: #3D5A6B;
   font-family: 'Nunito', sans-serif;
-  font-size: 14px;
+  font-size: 13px;
   outline: none;
 }
 
@@ -429,19 +429,25 @@ button {
   color: #7A8B8C;
 }
 
-#goal-save-btn {
-  background: #5D7A8C;
-  color: white;
-  padding: 8px 16px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-family: 'Nunito', sans-serif;
-  font-size: 13px;
+#goal-panel-input-wrapper {
+  position: relative;
+  width: 100%;
 }
 
-#goal-save-btn:hover {
-  background: #4A6575;
+#goal-panel-input {
+  padding-right: 120px;
+}
+
+#goal-panel-hint {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9A8B8C;
+  font-size: 11px;
+  font-style: italic;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 #goal-bar #goal-input {

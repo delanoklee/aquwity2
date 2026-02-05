@@ -282,7 +282,9 @@ async function performCheck() {
 
         if (offTaskCount === 3) {
           // First off-task: bring window to top and start animation
-          mainWindow.setAlwaysOnTop(true);
+          mainWindow.setAlwaysOnTop(true, 'screen-saver');
+          mainWindow.moveTop();
+          mainWindow.focus();
           mainWindow.webContents.send('off-task-level', true);  // start animation
         }
 
