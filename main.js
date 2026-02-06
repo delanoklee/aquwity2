@@ -9,7 +9,7 @@ if (GEMINI_API_KEY === '__GEMINI_API_KEY_PLACEHOLDER__') {
   // Local development - try to load from .env
   try {
     require('dotenv').config({ path: path.join(__dirname, '.env') });
-    GEMINI_API_KEY = GEMINI_API_KEY || '';
+    GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
   } catch (e) {
     GEMINI_API_KEY = '';
   }
@@ -26,6 +26,7 @@ let completedTasks = [];
 let completedTasksPath = null;
 let offTaskCount = 0;
 let taskStartTime = null;  // Track when the current task was started
+let todoListShownInLockedIn = false;  // Two-step Ctrl+Shift+D state
 const focusEnabled = true;
 
 function loadCompletedTasks() {
@@ -70,6 +71,14 @@ function createWindow() {
 
   mainWindow.loadFile('index.html');
   mainWindow.setVisibleOnAllWorkspaces(true);
+
+  // Re-raise window if it loses focus while in off-task mode
+  mainWindow.on('blur', () => {
+    if (offTaskCount >= 3) {
+      mainWindow.moveTop();
+      mainWindow.focus();
+    }
+  });
 }
 
 async function captureAllScreens(windowToHide) {
@@ -282,10 +291,14 @@ async function performCheck() {
 
         if (offTaskCount === 3) {
           // First off-task: bring window to top and start animation
-          mainWindow.setAlwaysOnTop(true, 'screen-saver');
+          const topLevel = process.platform === 'darwin' ? 'screen-saver' : 'floating';
+          mainWindow.setAlwaysOnTop(true, topLevel);
           mainWindow.moveTop();
           mainWindow.focus();
           mainWindow.webContents.send('off-task-level', true);  // start animation
+        } else if (offTaskCount > 3) {
+          // Re-assert top position every tick so the window can't be buried
+          mainWindow.moveTop();
         }
 
         // Notify renderer when animation reaches fully red (90 seconds)
@@ -345,6 +358,7 @@ function stopTracking() {
 ipcMain.on('set-task', (event, taskText) => {
   console.log('set-task received:', taskText);
   currentTask = taskText;
+  todoListShownInLockedIn = false;  // Reset two-step state when task changes
 });
 
 ipcMain.handle('get-history', () => {
@@ -358,6 +372,7 @@ ipcMain.on('start-tracking', () => {
 
 ipcMain.on('stop-tracking', () => {
   taskStartTime = null;  // Clear start time when tracking stops
+  todoListShownInLockedIn = false;  // Reset two-step state when exiting locked-in mode
   stopTracking();
 });
 
@@ -515,29 +530,39 @@ app.whenReady().then(() => {
 
   createWindow();
 
-  // Register Ctrl+Shift+D global shortcut for marking task as done
+  // Register Ctrl+Shift+D global shortcut for marking task as done (two-step process)
   const registered = globalShortcut.register('CommandOrControl+Shift+D', () => {
-    console.log('Ctrl+Shift+D pressed, currentTask:', currentTask);
+    console.log('Ctrl+Shift+D pressed, currentTask:', currentTask, 'todoListShown:', todoListShownInLockedIn);
     if (currentTask && currentTask.trim()) {
-      const duration = taskStartTime ? Date.now() - taskStartTime : null;
-      const completedTask = {
-        timestamp: new Date().toISOString(),
-        task: currentTask,
-        type: 'completed',
-        duration: duration  // milliseconds, or null if not tracked
-      };
-      completedTasks.push(completedTask);
-      saveCompletedTasks();
-      console.log('Sending task-completed to renderer:', completedTask);
-      mainWindow.webContents.send('task-completed', completedTask);
-      // Reset off-task warning state
-      if (offTaskCount > 0) {
-        mainWindow.setAlwaysOnTop(false);
-        mainWindow.webContents.send('off-task-level', false);
+      if (!todoListShownInLockedIn) {
+        // First press: Show todo list while staying in locked-in mode
+        todoListShownInLockedIn = true;
+        mainWindow.webContents.send('show-todos-in-lockedin', true);
+      } else {
+        // Second press: Complete the task
+        todoListShownInLockedIn = false;
+        mainWindow.webContents.send('show-todos-in-lockedin', false);
+
+        const duration = taskStartTime ? Date.now() - taskStartTime : null;
+        const completedTask = {
+          timestamp: new Date().toISOString(),
+          task: currentTask,
+          type: 'completed',
+          duration: duration  // milliseconds, or null if not tracked
+        };
+        completedTasks.push(completedTask);
+        saveCompletedTasks();
+        console.log('Sending task-completed to renderer:', completedTask);
+        mainWindow.webContents.send('task-completed', completedTask);
+        // Reset off-task warning state
+        if (offTaskCount > 0) {
+          mainWindow.setAlwaysOnTop(false);
+          mainWindow.webContents.send('off-task-level', false);
+        }
+        offTaskCount = 0;
+        currentTask = '';
+        taskStartTime = null;  // Reset after completing
       }
-      offTaskCount = 0;
-      currentTask = '';
-      taskStartTime = null;  // Reset after completing
     } else {
       console.log('No task to complete');
     }
