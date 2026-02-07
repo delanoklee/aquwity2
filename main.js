@@ -1,51 +1,215 @@
 const path = require('path');
-const { app, BrowserWindow, desktopCapturer, ipcMain, screen, globalShortcut, Menu } = require('electron');
+const { app, BrowserWindow, desktopCapturer, ipcMain, screen, globalShortcut, Menu, shell } = require('electron');
 const fs = require('fs');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-// API key is injected at build time by CI, or loaded from .env for local dev
-let GEMINI_API_KEY = '__GEMINI_API_KEY_PLACEHOLDER__';
-if (GEMINI_API_KEY === '__GEMINI_API_KEY_PLACEHOLDER__') {
-  // Local development - try to load from .env
-  try {
-    require('dotenv').config({ path: path.join(__dirname, '.env') });
-    GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-  } catch (e) {
-    GEMINI_API_KEY = '';
-  }
-}
+// ============================================
+// CONFIGURATION
+// ============================================
+const API_URL = 'https://api.aquwity.com';
 
-// In-memory state
+// ============================================
+// STATE
+// ============================================
 let currentTask = "";
-let screenshotBuffer = []; // Holds screenshot for analysis
+let screenshotBuffer = [];
 let history = [];
 let trackingInterval = null;
 let mainWindow = null;
+let splashWindow = null;
 let interventionWindow = null;
 let completedTasks = [];
-let completedTasksPath = null;
 let offTaskCount = 0;
-let taskStartTime = null;  // Track when the current task was started
-let todoListShownInLockedIn = false;  // Two-step Ctrl+Shift+D state
+let taskStartTime = null;
 const focusEnabled = true;
 
-function loadCompletedTasks() {
-  try {
-    if (fs.existsSync(completedTasksPath)) {
-      completedTasks = JSON.parse(fs.readFileSync(completedTasksPath, 'utf8'));
+// Auth state
+let authSession = null; // { access_token, refresh_token, user }
+let authPath = null;    // Path to stored session file
+
+// ============================================
+// CUSTOM PROTOCOL - Register 'acuity://' deep link
+// ============================================
+if (process.defaultApp) {
+  // In development, register the protocol with the path to electron
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient('acuity', process.execPath, [path.resolve(process.argv[1])]);
+
+    // On Linux, also create a .desktop file so xdg-open can find the handler
+    if (process.platform === 'linux') {
+      try {
+        const { execSync } = require('child_process');
+        const desktopDir = path.join(app.getPath('home'), '.local', 'share', 'applications');
+        fs.mkdirSync(desktopDir, { recursive: true });
+        const desktopEntry = [
+          '[Desktop Entry]',
+          'Name=Acuity (Dev)',
+          'Type=Application',
+          `Exec="${process.execPath}" "${path.resolve(process.argv[1])}" %U`,
+          'StartupNotify=false',
+          'MimeType=x-scheme-handler/acuity;',
+        ].join('\n');
+        const desktopFilePath = path.join(desktopDir, 'acuity-dev.desktop');
+        fs.writeFileSync(desktopFilePath, desktopEntry + '\n');
+        execSync(`xdg-mime default acuity-dev.desktop x-scheme-handler/acuity`);
+      } catch (e) {
+        console.warn('Failed to register acuity:// protocol via .desktop file:', e.message);
+      }
     }
-  } catch (e) {
-    completedTasks = [];
+  }
+} else {
+  // In production
+  app.setAsDefaultProtocolClient('acuity');
+}
+
+// Handle the protocol URL when app is already running (macOS)
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  handleAuthCallback(url);
+});
+
+// Handle the protocol URL on Windows/Linux (second instance)
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (event, argv) => {
+    // On Windows/Linux, the URL is in argv
+    const url = argv.find(arg => arg.startsWith('acuity://'));
+    if (url) {
+      handleAuthCallback(url);
+    }
+    // Focus the existing window
+    if (splashWindow) {
+      if (splashWindow.isMinimized()) splashWindow.restore();
+      splashWindow.focus();
+    }
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+}
+
+// Parse the auth callback URL and save session
+function handleAuthCallback(url) {
+  console.log('Auth callback received:', url);
+  try {
+    // Parse acuity://auth-callback?access_token=...&refresh_token=...
+    const urlObj = new URL(url);
+    const params = urlObj.searchParams;
+
+    const access_token = params.get('access_token');
+    const refresh_token = params.get('refresh_token');
+    const user_id = params.get('user_id');
+    const email = params.get('email');
+
+    if (access_token && refresh_token) {
+      saveSession({
+        access_token,
+        refresh_token,
+        user: { id: user_id, email },
+      });
+
+      // Close splash and open main app
+      if (splashWindow && !splashWindow.isDestroyed()) {
+        splashWindow.close();
+        splashWindow = null;
+      }
+      createWindow();
+    }
+  } catch (err) {
+    console.error('Error parsing auth callback:', err);
   }
 }
 
-function saveCompletedTasks() {
-  fs.writeFileSync(completedTasksPath, JSON.stringify(completedTasks, null, 2));
+// ============================================
+// AUTH - Token Storage
+// ============================================
+function loadSession() {
+  try {
+    if (fs.existsSync(authPath)) {
+      authSession = JSON.parse(fs.readFileSync(authPath, 'utf8'));
+      return true;
+    }
+  } catch (e) {
+    authSession = null;
+  }
+  return false;
 }
 
-// Initialize Gemini
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+function saveSession(session) {
+  authSession = session;
+  fs.writeFileSync(authPath, JSON.stringify(session, null, 2));
+}
 
+function clearSession() {
+  authSession = null;
+  if (authPath && fs.existsSync(authPath)) {
+    fs.unlinkSync(authPath);
+  }
+}
+
+// Helper to make authenticated API calls
+async function apiFetch(endpoint, options = {}) {
+  if (!authSession?.access_token) {
+    throw new Error('Not authenticated');
+  }
+
+  const url = `${API_URL}${endpoint}`;
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${authSession.access_token}`,
+    ...options.headers,
+  };
+
+  const response = await fetch(url, { ...options, headers });
+
+  // If token expired, prompt re-login
+  if (response.status === 401) {
+    console.log('Token expired, clearing session...');
+    clearSession();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.close();
+    }
+    showSplashWindow();
+    throw new Error('Session expired');
+  }
+
+  return response;
+}
+
+// ============================================
+// SPLASH WINDOW - Shows "Sign In" button, opens browser
+// ============================================
+function showSplashWindow() {
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.focus();
+    return;
+  }
+
+  splashWindow = new BrowserWindow({
+    width: 400,
+    height: 340,
+    frame: false,
+    resizable: false,
+    webPreferences: {
+      preload: path.join(__dirname, 'splash-preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  splashWindow.loadFile('splash.html');
+}
+
+// IPC: Open browser for login
+ipcMain.on('open-login', () => {
+  shell.openExternal(`${API_URL}/login`);
+});
+
+// ============================================
+// MAIN WINDOW (same as before)
+// ============================================
 function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width } = primaryDisplay.workAreaSize;
@@ -63,7 +227,7 @@ function createWindow() {
     skipTaskbar: true,
     transparent: true,
     webPreferences: {
-      preload: __dirname + '/preload.js',
+      preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false
     }
@@ -71,18 +235,12 @@ function createWindow() {
 
   mainWindow.loadFile('index.html');
   mainWindow.setVisibleOnAllWorkspaces(true);
-
-  // Re-raise window if it loses focus while in off-task mode
-  mainWindow.on('blur', () => {
-    if (offTaskCount >= 3) {
-      mainWindow.moveTop();
-      mainWindow.focus();
-    }
-  });
 }
 
+// ============================================
+// SCREENSHOT CAPTURE (unchanged)
+// ============================================
 async function captureAllScreens(windowToHide) {
-  // Temporarily make window invisible for capture
   if (windowToHide) {
     windowToHide.setOpacity(0);
   }
@@ -92,7 +250,6 @@ async function captureAllScreens(windowToHide) {
     thumbnailSize: { width: 1920, height: 1080 }
   });
 
-  // Restore window visibility
   if (windowToHide) {
     windowToHide.setOpacity(1);
   }
@@ -100,165 +257,75 @@ async function captureAllScreens(windowToHide) {
   const screenshots = [];
   for (const source of sources) {
     const thumbnail = source.thumbnail.toDataURL();
-    // Remove the data:image/png;base64, prefix
     const base64 = thumbnail.replace(/^data:image\/\w+;base64,/, '');
     screenshots.push(base64);
   }
   return screenshots;
 }
 
+// ============================================
+// AI ANALYSIS - Calls your backend
+// ============================================
 async function analyzeBatch(buffer) {
   if (!currentTask || currentTask.trim() === '') {
-    return { on: 0, activity: "No task specified" };
-  }
-
-  if (!GEMINI_API_KEY) {
-    return { on: 0, activity: "API key not configured" };
+    return { onTask: false, activity: "No task specified" };
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
-    // Build the image parts array from all screenshots in the buffer
-    const imageParts = [];
+    const screenshots = [];
     for (const screenshotSet of buffer) {
       for (const base64 of screenshotSet) {
-        imageParts.push({
-          inlineData: {
-            data: base64,
-            mimeType: "image/png"
-          }
-        });
+        screenshots.push(base64);
       }
     }
 
-    const prompt = `You are checking if a user is actively working on their stated task.
+    const response = await apiFetch('/api/analyze', {
+      method: 'POST',
+      body: JSON.stringify({
+        task: currentTask,
+        screenshots: screenshots,
+      }),
+    });
 
-Task: "${currentTask}"
+    const result = await response.json();
 
-Determine if the user's current activity matches their task:
-- Match SEMANTICALLY, not literally (task "watching youtube" matches activity "viewing a YouTube video")
-- Look at: window titles, URLs, visible content, applications in use
-- No motion between frames = READING/THINKING (on-task if content is relevant)
-- When ambiguous, lean toward on-task
-- IGNORE any UI overlay with "ACUITY" text or 🔒 lock icons - this is a focus app, not the user's work
-
-Return ONLY raw JSON:
-{
-  "on": 1 if activity matches task, 0 if clearly unrelated,
-  "activity": "specific description with quoted text from screen"
-}
-
-Examples:
-- Task "watch youtube" + YouTube open = on:1
-- Task "write code" + VS Code with code visible = on:1
-- Task "write code" + browsing Reddit = on:0`;
-
-    const result = await model.generateContent([prompt, ...imageParts]);
-    const response = await result.response;
-    const text = response.text();
-
-    // Parse JSON from response
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      // Normalize the response
-      return {
-        onTask: parsed.on === 1 || parsed.on === true,
-        activity: parsed.activity || "Unknown activity"
-      };
+    if (result.error) {
+      console.error('Analyze API error:', result.error);
+      return { onTask: false, activity: `API error: ${result.error}` };
     }
-    return { onTask: false, activity: "Could not parse response" };
+
+    return {
+      onTask: result.onTask === true,
+      activity: result.activity || 'Unknown activity',
+    };
   } catch (error) {
-    console.error('Gemini API error:', error);
-    return { onTask: false, activity: `API error: ${error.message}` };
+    console.error('Analyze error:', error);
+    return { onTask: false, activity: `Error: ${error.message}` };
   }
 }
 
-async function analyzeActivityObserveMode(buffer) {
-  if (!GEMINI_API_KEY) {
-    return { activity: "API key not configured" };
-  }
-
-  try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
-    // Build the image parts array from all screenshots in the buffer
-    const imageParts = [];
-    for (const screenshotSet of buffer) {
-      for (const base64 of screenshotSet) {
-        imageParts.push({
-          inlineData: {
-            data: base64,
-            mimeType: "image/png"
-          }
-        });
-      }
-    }
-
-    const prompt = `Analyze the screenshots and describe SPECIFICALLY what the user is doing.
-Be extremely granular - don't just say 'using LinkedIn' or 'in VS Code'.
-
-Examples of good granularity:
-- LinkedIn: 'Scrolling through feed reading posts' vs 'Viewing a specific person's profile'
-  vs 'Composing a connection request message' vs 'Reading/replying to DMs'
-- VS Code: 'Writing a new function in main.js' vs 'Debugging with breakpoints'
-  vs 'Reading documentation in a markdown file' vs 'Running terminal commands'
-- Browser: 'Reading a technical article about React hooks' vs 'Watching a YouTube tutorial'
-  vs 'Shopping on Amazon' vs 'Checking email inbox'
-
-Look at window titles, visible text, cursor position, and UI elements to determine
-the specific action, not just the application.
-
-I'm showing you 3 consecutive screenshots (1 second apart).
-
-Respond with JSON only, no markdown: {"activity": "specific granular description of current activity"}`;
-
-    const result = await model.generateContent([prompt, ...imageParts]);
-    const response = await result.response;
-    const text = response.text();
-
-    // Parse JSON from response
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-    return { activity: "Could not parse response" };
-  } catch (error) {
-    console.error('Gemini API error:', error);
-    return { activity: `API error: ${error.message}` };
-  }
-}
-
+// ============================================
+// PERFORM CHECK
+// ============================================
 async function performCheck() {
   console.log('Capturing screenshot...');
 
-  // Capture new screenshots (hide mainWindow during capture)
   const currentScreenshot = await captureAllScreens(mainWindow);
   screenshotBuffer.push(currentScreenshot);
   console.log(`Captured ${currentScreenshot.length} screen(s)`);
 
-  // Analyze immediately (every second)
   if (screenshotBuffer.length >= 1) {
     const checkingFocus = focusEnabled && currentTask && currentTask.trim();
-    console.log('Analyzing screenshot...', checkingFocus ? '(focus enabled)' : '(observe only)');
+    console.log('Analyzing screenshot...', checkingFocus ? '(focus mode)' : '(no task)');
 
-    let result;
-    if (checkingFocus) {
-      result = await analyzeBatch(screenshotBuffer);
-      // Convert to common format
-      result = {
-        activity: result.activity,
-        onTask: result.on === 1
-      };
-    } else {
-      result = await analyzeActivityObserveMode(screenshotBuffer);
-      result.onTask = null;
+    if (!checkingFocus) {
+      screenshotBuffer = [];
+      return;
     }
 
+    const result = await analyzeBatch(screenshotBuffer);
     console.log('Analysis result:', result);
 
-    // Reset buffer after analysis
     screenshotBuffer = [];
 
     const entry = {
@@ -266,83 +333,58 @@ async function performCheck() {
       type: 'observation',
       activity: result.activity,
       onTask: result.onTask,
-      task: currentTask  // Track which task this observation belongs to
+      task: currentTask
     };
     history.push(entry);
 
-    // Handle focus mode off-task intervention
-    if (checkingFocus) {
-      const isError = result.activity && (
-        result.activity.startsWith('API error:') ||
-        result.activity === 'API key not configured' ||
-        result.activity === 'Could not parse response'
-      );
+    // Handle off-task intervention
+    const isError = result.activity && (
+      result.activity.startsWith('API error:') ||
+      result.activity.startsWith('Error:') ||
+      result.activity === 'Could not parse response'
+    );
 
-      if (result.onTask || isError) {
-        // Reset when back on-task
-        if (offTaskCount > 0) {
-          mainWindow.setAlwaysOnTop(false);
-          mainWindow.webContents.send('off-task-level', false);  // on-task
-        }
-        offTaskCount = 0;
-      } else {
-        offTaskCount++;
-        console.log('Off-task count:', offTaskCount);
+    if (result.onTask || isError) {
+      if (offTaskCount > 0) {
+        mainWindow.setAlwaysOnTop(false);
+        mainWindow.webContents.send('off-task-level', false);
+      }
+      offTaskCount = 0;
+    } else {
+      offTaskCount++;
+      console.log('Off-task count:', offTaskCount);
 
-        if (offTaskCount === 3) {
-          // First off-task: bring window to top and start animation
-          const topLevel = process.platform === 'darwin' ? 'screen-saver' : 'floating';
-          mainWindow.setAlwaysOnTop(true, topLevel);
-          mainWindow.moveTop();
-          mainWindow.focus();
-          mainWindow.webContents.send('off-task-level', true);  // start animation
-        } else if (offTaskCount > 3) {
-          // Re-assert top position every tick so the window can't be buried
-          mainWindow.moveTop();
-        }
+      if (offTaskCount === 3) {
+        mainWindow.setAlwaysOnTop(true, 'screen-saver');
+        mainWindow.moveTop();
+        mainWindow.focus();
+        mainWindow.webContents.send('off-task-level', true);
+      }
 
-        // Notify renderer when animation reaches fully red (90 seconds)
-        if (offTaskCount === 90) {
-          mainWindow.webContents.send('off-task-fully-red', true);
-        }
+      if (offTaskCount === 90) {
+        mainWindow.webContents.send('off-task-fully-red', true);
       }
     }
 
-    // Send result to renderer
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('analysis-result', entry);
     }
   }
 }
 
+// ============================================
+// TRACKING (unchanged)
+// ============================================
 function getCheckInterval() {
-  // 1 second when locked in, 3 minutes when not
   return focusEnabled ? 1 * 1000 : 3 * 60 * 1000;
-}
-
-function updateTrackingInterval() {
-  if (!trackingInterval) return;
-
-  clearInterval(trackingInterval);
-  screenshotBuffer = []; // Reset buffer when interval changes
-  trackingInterval = setInterval(performCheck, getCheckInterval());
-  console.log(`Interval updated: ${focusEnabled ? '1 second' : '3 minutes'}`);
 }
 
 function startTracking() {
   if (trackingInterval) return;
-
   console.log('Tracking started');
-
-  // Reset buffer
   screenshotBuffer = [];
-
-  // Perform initial capture immediately
   performCheck();
-
-  // Set up interval based on focus mode
   trackingInterval = setInterval(performCheck, getCheckInterval());
-  console.log(`Interval set: ${focusEnabled ? '1 second' : '3 minutes'}`);
 }
 
 function stopTracking() {
@@ -350,15 +392,15 @@ function stopTracking() {
     clearInterval(trackingInterval);
     trackingInterval = null;
   }
-  // Clean up off-task state
   offTaskCount = 0;
 }
 
-// IPC handlers
+// ============================================
+// IPC HANDLERS
+// ============================================
 ipcMain.on('set-task', (event, taskText) => {
   console.log('set-task received:', taskText);
   currentTask = taskText;
-  todoListShownInLockedIn = false;  // Reset two-step state when task changes
 });
 
 ipcMain.handle('get-history', () => {
@@ -366,19 +408,16 @@ ipcMain.handle('get-history', () => {
 });
 
 ipcMain.on('start-tracking', () => {
-  taskStartTime = Date.now();  // Track when task started
+  taskStartTime = Date.now();
   startTracking();
 });
 
 ipcMain.on('stop-tracking', () => {
-  taskStartTime = null;  // Clear start time when tracking stops
-  todoListShownInLockedIn = false;  // Reset two-step state when exiting locked-in mode
+  taskStartTime = null;
   stopTracking();
 });
 
-// Focus is always enabled - no-op handler for backwards compatibility
 ipcMain.on('set-focus-enabled', (event, enabled) => {
-  // Focus mode is always on now - this handler is kept for API compatibility
   console.log('Focus mode is always on (received:', enabled, ')');
 });
 
@@ -392,59 +431,82 @@ ipcMain.on('resize-window', (event, height) => {
   }
 });
 
-ipcMain.handle('get-completed-tasks', () => {
-  return completedTasks;
+// Completed tasks - saves to backend
+ipcMain.handle('get-completed-tasks', async () => {
+  try {
+    const response = await apiFetch('/api/tasks');
+    const data = await response.json();
+    return data.map(t => ({
+      timestamp: t.completed_at,
+      task: t.task,
+      type: 'completed',
+      duration: (t.focused_ms || 0) + (t.distracted_ms || 0),
+      focused_ms: t.focused_ms,
+      distracted_ms: t.distracted_ms,
+    }));
+  } catch (error) {
+    console.error('Error fetching tasks:', error);
+    return completedTasks;
+  }
 });
 
-ipcMain.handle('complete-todo', (event, todoText, duration) => {
+ipcMain.handle('complete-todo', async (event, todoText, duration) => {
   const completedTask = {
     timestamp: new Date().toISOString(),
     task: todoText,
     type: 'completed',
     source: 'todo',
-    duration: duration  // milliseconds, or null if not tracked
+    duration: duration,
   };
+
+  try {
+    const taskObservations = history.filter(h =>
+      h.task === todoText && h.type === 'observation' && h.onTask !== null
+    );
+    const totalObs = taskObservations.length;
+    const onTaskObs = taskObservations.filter(o => o.onTask).length;
+    const offTaskObs = totalObs - onTaskObs;
+
+    const focused_ms = totalObs > 0 ? Math.round((onTaskObs / totalObs) * (duration || 0)) : (duration || 0);
+    const distracted_ms = totalObs > 0 ? Math.round((offTaskObs / totalObs) * (duration || 0)) : 0;
+
+    await apiFetch('/api/tasks', {
+      method: 'POST',
+      body: JSON.stringify({ task: todoText, focused_ms, distracted_ms }),
+    });
+  } catch (error) {
+    console.error('Error saving completed task to backend:', error);
+  }
+
   completedTasks.push(completedTask);
-  saveCompletedTasks();
   return completedTask;
 });
 
 ipcMain.handle('categorize-activities', async (event, activities) => {
-  if (!GEMINI_API_KEY || activities.length === 0) {
-    return {};
-  }
-
-  try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
-    const prompt = `I have a list of off-task activities that a user did while they should have been working. Please categorize these activities into logical groups.
-
-Activities:
-${activities.map((a, i) => `${i + 1}. ${a}`).join('\n')}
-
-Analyze these activities and group them into categories that make sense (e.g., "Social Media", "Entertainment", "Shopping", "News", "Communication", etc.). You decide the categories based on what you see - don't use predefined categories.
-
-Respond with JSON only, no markdown. Format:
-{"categories": {"Category Name": ["activity 1", "activity 2"], "Another Category": ["activity 3"]}}`;
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      return parsed.categories || {};
-    }
-    return {};
-  } catch (error) {
-    console.error('Error categorizing activities:', error);
-    return {};
-  }
+  return {};
 });
 
+// Auth IPC
+ipcMain.handle('get-user', () => {
+  if (authSession?.user) {
+    return { email: authSession.user.email, id: authSession.user.id };
+  }
+  return null;
+});
+
+ipcMain.handle('logout', () => {
+  clearSession();
+  stopTracking();
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.close();
+  }
+  showSplashWindow();
+});
+
+// ============================================
+// INTERVENTION WINDOW (unchanged)
+// ============================================
 function showInterventionWindow() {
-  // Don't create multiple intervention windows
   if (interventionWindow && !interventionWindow.isDestroyed()) {
     interventionWindow.focus();
     return;
@@ -452,7 +514,6 @@ function showInterventionWindow() {
 
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width, height } = primaryDisplay.workAreaSize;
-
   const winWidth = 400;
   const winHeight = 200;
 
@@ -468,7 +529,7 @@ function showInterventionWindow() {
     resizable: false,
     skipTaskbar: true,
     webPreferences: {
-      preload: __dirname + '/intervention-preload.js',
+      preload: path.join(__dirname, 'intervention-preload.js'),
       contextIsolation: true,
       nodeIntegration: false
     }
@@ -476,7 +537,6 @@ function showInterventionWindow() {
 
   interventionWindow.loadFile('intervention.html');
 
-  // Send current task to intervention window once it's ready
   interventionWindow.webContents.on('did-finish-load', () => {
     interventionWindow.webContents.send('set-current-task', currentTask);
   });
@@ -486,24 +546,22 @@ ipcMain.on('confirm-task', (event, confirmedTask) => {
   currentTask = confirmedTask;
   offTaskCount = 0;
 
-  // Sync the task back to the main window
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('task-updated', confirmedTask);
   }
 
-  // Close intervention window
   if (interventionWindow && !interventionWindow.isDestroyed()) {
     interventionWindow.close();
     interventionWindow = null;
   }
 });
 
+// ============================================
+// APP LIFECYCLE
+// ============================================
 app.whenReady().then(() => {
-  // Initialize completed tasks path and load saved tasks
-  completedTasksPath = path.join(app.getPath('userData'), 'completed-tasks.json');
-  loadCompletedTasks();
+  authPath = path.join(app.getPath('userData'), 'auth-session.json');
 
-  // Set up application menu for copy/paste and reload support
   const menu = Menu.buildFromTemplate([
     {
       label: 'Edit',
@@ -528,50 +586,63 @@ app.whenReady().then(() => {
   ]);
   Menu.setApplicationMenu(menu);
 
-  createWindow();
+  // Check for existing session
+  if (loadSession()) {
+    console.log('Found saved session, opening main window...');
+    createWindow();
+  } else {
+    console.log('No session found, showing splash...');
+    showSplashWindow();
+  }
 
-  // Register Ctrl+Shift+D global shortcut for marking task as done (two-step process)
+  // Register Ctrl+Shift+D global shortcut
   const registered = globalShortcut.register('CommandOrControl+Shift+D', () => {
-    console.log('Ctrl+Shift+D pressed, currentTask:', currentTask, 'todoListShown:', todoListShownInLockedIn);
+    console.log('Ctrl+Shift+D pressed, currentTask:', currentTask);
     if (currentTask && currentTask.trim()) {
-      if (!todoListShownInLockedIn) {
-        // First press: Show todo list while staying in locked-in mode
-        todoListShownInLockedIn = true;
-        mainWindow.webContents.send('show-todos-in-lockedin', true);
-      } else {
-        // Second press: Complete the task
-        todoListShownInLockedIn = false;
-        mainWindow.webContents.send('show-todos-in-lockedin', false);
+      const duration = taskStartTime ? Date.now() - taskStartTime : null;
 
-        const duration = taskStartTime ? Date.now() - taskStartTime : null;
-        const completedTask = {
-          timestamp: new Date().toISOString(),
-          task: currentTask,
-          type: 'completed',
-          duration: duration  // milliseconds, or null if not tracked
-        };
-        completedTasks.push(completedTask);
-        saveCompletedTasks();
-        console.log('Sending task-completed to renderer:', completedTask);
-        mainWindow.webContents.send('task-completed', completedTask);
-        // Reset off-task warning state
-        if (offTaskCount > 0) {
-          mainWindow.setAlwaysOnTop(false);
-          mainWindow.webContents.send('off-task-level', false);
-        }
-        offTaskCount = 0;
-        currentTask = '';
-        taskStartTime = null;  // Reset after completing
+      const taskObservations = history.filter(h =>
+        h.task === currentTask && h.type === 'observation' && h.onTask !== null
+      );
+      const totalObs = taskObservations.length;
+      const onTaskObs = taskObservations.filter(o => o.onTask).length;
+      const offTaskObs = totalObs - onTaskObs;
+      const focused_ms = totalObs > 0 ? Math.round((onTaskObs / totalObs) * (duration || 0)) : (duration || 0);
+      const distracted_ms = totalObs > 0 ? Math.round((offTaskObs / totalObs) * (duration || 0)) : 0;
+
+      const completedTask = {
+        timestamp: new Date().toISOString(),
+        task: currentTask,
+        type: 'completed',
+        duration: duration,
+      };
+      completedTasks.push(completedTask);
+
+      apiFetch('/api/tasks', {
+        method: 'POST',
+        body: JSON.stringify({ task: currentTask, focused_ms, distracted_ms }),
+      }).catch(err => console.error('Error saving task:', err));
+
+      mainWindow.webContents.send('task-completed', completedTask);
+
+      if (offTaskCount > 0) {
+        mainWindow.setAlwaysOnTop(false);
+        mainWindow.webContents.send('off-task-level', false);
       }
-    } else {
-      console.log('No task to complete');
+      offTaskCount = 0;
+      currentTask = '';
+      taskStartTime = null;
     }
   });
   console.log('Shortcut registered:', registered);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+      if (authSession) {
+        createWindow();
+      } else {
+        showSplashWindow();
+      }
     }
   });
 });
