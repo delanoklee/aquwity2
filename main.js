@@ -310,7 +310,7 @@ async function analyzeBatch(buffer) {
 async function performCheck() {
   console.log('Capturing screenshot...');
 
-  const currentScreenshot = await captureAllScreens(mainWindow);
+  const currentScreenshot = await captureAllScreens();
   screenshotBuffer.push(currentScreenshot);
   console.log(`Captured ${currentScreenshot.length} screen(s)`);
 
@@ -415,6 +415,10 @@ ipcMain.on('start-tracking', () => {
 ipcMain.on('stop-tracking', () => {
   taskStartTime = null;
   stopTracking();
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.setAlwaysOnTop(false);
+    mainWindow.webContents.send('off-task-level', false);
+  }
 });
 
 ipcMain.on('set-focus-enabled', (event, enabled) => {
