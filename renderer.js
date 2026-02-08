@@ -349,6 +349,7 @@ function exitLockedInMode() {
   goalBar.classList.remove('locked-in');
   // Clear locked-in task display
   lockedinTask.textContent = '';
+  document.getElementById('locked-status-label').textContent = 'Focused';
   updateTodoVisibility();
   // Focus the first todo input
   const firstInput = todoList.querySelector('.todo-item-input');
@@ -764,6 +765,7 @@ window.acuity.onTaskCompleted((result) => {
     goalBar.classList.remove('locked-in');
     // Clear locked-in task display
     lockedinTask.textContent = '';
+    document.getElementById('locked-status-label').textContent = 'Focused';
 
     // Clear todos and create fresh empty one
     todos = [];
@@ -1091,11 +1093,14 @@ document.getElementById('new-task-btn').addEventListener('click', () => {
 
 // Listen for off-task warning state
 window.acuity.onOffTaskLevel((isOffTask) => {
+  const statusLabel = document.getElementById('locked-status-label');
   if (isOffTask) {
     topBar.classList.add('off-task-warning');
+    statusLabel.textContent = 'Off task';
   } else {
     topBar.classList.remove('off-task-warning');
     topBar.classList.remove('fully-red');
+    statusLabel.textContent = 'Focused';
   }
 });
 

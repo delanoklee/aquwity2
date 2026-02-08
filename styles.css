@@ -113,32 +113,62 @@ body {
   border-bottom: 1px solid rgba(78, 122, 140, 0.06);
 }
 
+/* ── Locked-in base ── */
 #top-bar.locked-in {
-  background: #1e2f36;
+  background: #1a2a30;
   border-bottom-color: transparent;
   justify-content: center;
   align-items: center;
+  padding: 28px 20px 22px;
+  min-height: 80px;
 }
 
-/* ── Off-task warning (locked in) ── */
-
-@keyframes off-task-steps {
-  0% { background: #1e2f36; }
-  100% { background: rgba(180, 30, 30, 0.95); }
+/* Subtle radial glow */
+#top-bar.locked-in::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(78,122,140,0.08) 0%, transparent 70%);
+  pointer-events: none;
+  border-radius: inherit;
 }
 
-#top-bar.locked-in.off-task-warning {
-  animation: off-task-steps 90s steps(6, end) forwards;
-  transition: none;
+/* Border element for off-task warning glow */
+#top-bar.locked-in::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid #c0706a;
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
 }
 
-@keyframes red-pulse {
-  0%, 100% { background: rgba(180, 30, 30, 0.95); }
-  50% { background: rgba(220, 30, 30, 0.95); }
+/* ── Status indicator (visible only when locked in) ── */
+#locked-status {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
 }
 
-#top-bar.locked-in.off-task-warning.fully-red {
-  animation: red-pulse 1s ease-in-out infinite;
+#top-bar.locked-in #locked-status {
+  display: flex;
+}
+
+#locked-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #b8cfa0;
+  animation: pulse-dot 2.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50%      { opacity: 1; transform: scale(1.3); }
 }
 
 #top-bar.locked-in #todo-list {
@@ -170,55 +200,117 @@ body {
   stroke: #f0e2c4;
 }
 
-/* ── Locked-in Task Display ── */
+#locked-status-label {
+  font-size: 10px;
+  font-weight: 600;
+  font-family: 'DM Sans', sans-serif;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: rgba(240, 226, 196, 0.25);
+}
 
+/* ── Task display ── */
 #lockedin-task {
   display: none;
-  flex: 1;
   text-align: center;
-  color: #f0e2c4;
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.2px;
+  color: #e8dcc4;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  line-height: 1.3;
+  max-width: 280px;
 }
 
 #top-bar.locked-in #lockedin-task {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
 }
 
-#lockedin-tip {
+/* ── Hints bar ── */
+#locked-hints {
   display: none;
-  position: absolute;
-  bottom: 5px;
-  right: 10px;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-top: 16px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(240, 226, 196, 0.06);
+}
+
+#top-bar.locked-in #locked-hints {
+  display: flex;
+}
+
+.locked-hint {
   font-size: 9px;
   font-family: 'DM Sans', sans-serif;
-  color: rgba(240, 226, 196, 0.25);
+  color: rgba(240, 226, 196, 0.15);
   letter-spacing: 0.3px;
   -webkit-app-region: no-drag;
 }
 
-#top-bar.locked-in #lockedin-tip {
-  display: block;
-}
-
-#acuity-marker {
-  display: none;
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 9px;
+.hint-key {
+  display: inline-block;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(240, 226, 196, 0.05);
+  border: 1px solid rgba(240, 226, 196, 0.06);
+  font-size: 8px;
   font-family: 'DM Sans', sans-serif;
-  color: rgba(240, 226, 196, 0.3);
-  font-weight: 700;
-  letter-spacing: 2px;
+  margin-right: 3px;
 }
 
-#top-bar.locked-in #acuity-marker {
-  display: block;
+/* ── Off-task warning (replaces the old full-red background approach) ── */
+#top-bar.locked-in.off-task-warning::after {
+  animation: border-warn-in 90s steps(8, end) forwards;
+}
+
+@keyframes border-warn-in {
+  0%   { opacity: 0; }
+  100% { opacity: 0.7; }
+}
+
+@keyframes bg-warm-rose {
+  0%   { background-color: #1a2a30; }
+  100% { background-color: #2a2028; }
+}
+
+#top-bar.locked-in.off-task-warning {
+  animation: bg-warm-rose 90s ease-in forwards;
+}
+
+#top-bar.locked-in.off-task-warning #locked-status-dot {
+  background: #c0706a;
+  animation: pulse-dot-warn 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot-warn {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50%      { opacity: 1; transform: scale(1.4); }
+}
+
+#top-bar.locked-in.off-task-warning #locked-status-label {
+  color: rgba(192, 112, 106, 0.6);
+}
+
+/* Fully red: gentle pulse instead of aggressive flash */
+#top-bar.locked-in.off-task-warning.fully-red {
+  animation: bg-pulse-red 1.5s ease-in-out infinite;
+}
+
+@keyframes bg-pulse-red {
+  0%, 100% { background-color: #2a2028; }
+  50%      { background-color: #352028; }
+}
+
+#top-bar.locked-in.off-task-warning.fully-red::after {
+  animation: none;
+  opacity: 0.8;
+  border-color: #c0706a;
+}
+
+#top-bar.locked-in.off-task-warning.fully-red #locked-status-label {
+  color: #c0706a;
 }
 
 /* ── Buttons (base) ── */
