@@ -1,6 +1,6 @@
 export const metadata = {
-  title: 'Acuity API',
-  description: 'Backend for Acuity focus app',
+  title: 'Aquwity API',
+  description: 'Backend for Aquwity focus app',
 };
 
 export default function RootLayout({ children }) {
