@@ -866,8 +866,8 @@ function updateTodoActions(div, todo) {
   const existingLockIn = div.querySelector('.todo-lock-in');
   if (existingLockIn) existingLockIn.remove();
 
-  if (isFirst && todo.text.trim()) {
-    // Hide delete, show lock-in
+  if (isFirst) {
+    // Always show lock-in button on first item
     deleteBtn.style.display = 'none';
     const lockInBtn = document.createElement('div');
     lockInBtn.className = 'todo-lock-in';
@@ -877,13 +877,20 @@ function updateTodoActions(div, todo) {
     `;
     lockInBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      enterLockedInMode(todo.text.trim());
+      if (todo.text.trim()) {
+        enterLockedInMode(todo.text.trim());
+      } else {
+        const input = div.querySelector('.todo-item-input');
+        input.placeholder = 'Enter a task to lock in';
+        div.classList.add('shake');
+        input.focus();
+        setTimeout(() => {
+          div.classList.remove('shake');
+          input.placeholder = 'What do you want to accomplish?';
+        }, 1500);
+      }
     });
     div.appendChild(lockInBtn);
-  } else if (isFirst && !todo.text.trim()) {
-    // First item, no text - show delete as ✕
-    deleteBtn.textContent = '\u2715';
-    deleteBtn.style.display = '';
   } else {
     // Non-first items - show minus button
     deleteBtn.textContent = '\u2212';

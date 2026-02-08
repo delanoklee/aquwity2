@@ -49,6 +49,7 @@ module.exports = {
       config: {
         options: {
           icon: './icons/icon.png',
+          mimeType: ['x-scheme-handler/acuity'],
         },
       },
     },

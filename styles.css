@@ -375,7 +375,6 @@ button:active {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
   padding-bottom: 4px;
   overflow: hidden;
   -webkit-app-region: no-drag;
@@ -386,17 +385,18 @@ button:active {
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
-  background: rgba(78, 122, 140, 0.05);
-  border-radius: 8px;
+  background: transparent;
+  border-radius: 0;
   color: #2c3e47;
   transition: background 0.2s, padding 0.15s;
   flex-shrink: 1;
   min-height: 0;
   overflow: hidden;
+  border-bottom: 1px solid rgba(61, 90, 107, 0.08);
 }
 
-.todo-item:first-child {
-  background: rgba(78, 122, 140, 0.08);
+.todo-item:last-child {
+  border-bottom: none;
 }
 
 .todo-text {
@@ -1046,6 +1046,22 @@ button:active {
 .todo-lock-in:hover .todo-lock-in-arrow {
   color: rgba(240, 226, 196, 0.5);
   transform: translateX(2px);
+}
+
+.todo-item.shake {
+  animation: shake 0.4s ease;
+}
+
+.todo-item.shake .todo-item-input::placeholder {
+  color: #c0706a;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(2px); }
 }
 
 /* ── Hide elements when locked in ── */

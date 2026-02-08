@@ -1,58 +1,24 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('acuity', {
-  setTask: (taskText) => {
-    ipcRenderer.send('set-task', taskText);
-  },
-
-  onAnalysisResult: (callback) => {
-    ipcRenderer.on('analysis-result', (event, result) => {
-      callback(result);
-    });
-  },
-
-  getHistory: () => {
-    return ipcRenderer.invoke('get-history');
-  },
-
-  startTracking: () => {
-    ipcRenderer.send('start-tracking');
-  },
-
-  stopTracking: () => {
-    ipcRenderer.send('stop-tracking');
-  },
-
-  resizeWindow: (height) => {
-    ipcRenderer.send('resize-window', height);
-  },
-
-  onTaskCompleted: (callback) => {
-    ipcRenderer.on('task-completed', (event, result) => {
-      console.log('preload: task-completed received', result);
-      callback(result);
-    });
-  },
-
+  setTask: (task) => ipcRenderer.send('set-task', task),
+  getHistory: () => ipcRenderer.invoke('get-history'),
+  startTracking: () => ipcRenderer.send('start-tracking'),
+  stopTracking: () => ipcRenderer.send('stop-tracking'),
+  setFocusEnabled: (enabled) => ipcRenderer.send('set-focus-enabled', enabled),
+  resizeWindow: (height) => ipcRenderer.send('resize-window', height),
   getCompletedTasks: () => ipcRenderer.invoke('get-completed-tasks'),
+  completeTodo: (text, duration) => ipcRenderer.invoke('complete-todo', text, duration),
+  categorizeActivities: (activities) => ipcRenderer.invoke('categorize-activities', activities),
 
-  completeTodo: (todoText, duration) => ipcRenderer.invoke('complete-todo', todoText, duration),
+  // Auth
+  getUser: () => ipcRenderer.invoke('get-user'),
+  logout: () => ipcRenderer.invoke('logout'),
 
-  onTaskUpdated: (callback) => {
-    ipcRenderer.on('task-updated', (event, task) => {
-      callback(task);
-    });
-  },
-
-  categorizeActivities: (activities) => {
-    return ipcRenderer.invoke('categorize-activities', activities);
-  },
-
-  onOffTaskLevel: (callback) => {
-    ipcRenderer.on('off-task-level', (event, level) => callback(level));
-  },
-
-  onOffTaskFullyRed: (callback) => {
-    ipcRenderer.on('off-task-fully-red', (event, isFullyRed) => callback(isFullyRed));
-  }
+  // Event listeners
+  onAnalysisResult: (callback) => ipcRenderer.on('analysis-result', (_, data) => callback(data)),
+  onTaskUpdated: (callback) => ipcRenderer.on('task-updated', (_, task) => callback(task)),
+  onTaskCompleted: (callback) => ipcRenderer.on('task-completed', (_, result) => callback(result)),
+  onOffTaskLevel: (callback) => ipcRenderer.on('off-task-level', (_, level) => callback(level)),
+  onOffTaskFullyRed: (callback) => ipcRenderer.on('off-task-fully-red', (_, data) => callback(data)),
 });

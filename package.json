@@ -26,8 +26,6 @@
     "electron": "^40.1.0"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
-    "dotenv": "^17.2.3",
     "electron-squirrel-startup": "^1.0.1"
   }
 }
