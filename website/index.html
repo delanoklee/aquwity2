@@ -1072,9 +1072,12 @@
         const linuxAsset = assets.find(a => a.name.endsWith('.deb'));
         const macosAsset = assets.find(a => a.name.endsWith('.dmg'));
 
-        if (windowsAsset) document.getElementById('link-windows').href = windowsAsset.browser_download_url;
-        if (linuxAsset) document.getElementById('link-linux').href = linuxAsset.browser_download_url;
-        if (macosAsset) document.getElementById('link-macos').href = macosAsset.browser_download_url;
+        const linkWin = document.getElementById('link-windows');
+        const linkLin = document.getElementById('link-linux');
+        const linkMac = document.getElementById('link-macos');
+        if (windowsAsset && linkWin) linkWin.href = windowsAsset.browser_download_url;
+        if (linuxAsset && linkLin) linkLin.href = linuxAsset.browser_download_url;
+        if (macosAsset && linkMac) linkMac.href = macosAsset.browser_download_url;
 
         const btns = [document.getElementById('download-btn'), document.getElementById('download-btn-bottom')];
         const ua = navigator.userAgent.toLowerCase();
@@ -1100,7 +1103,7 @@
       } catch (error) {
         console.error('Failed to fetch release info:', error);
         const fallback = `https://github.com/${REPO}/releases/latest`;
-        ['download-btn', 'download-btn-bottom', 'link-windows', 'link-linux', 'link-macos'].forEach(id => {
+        ['download-btn', 'download-btn-bottom'].forEach(id => {
           const el = document.getElementById(id);
           if (el) el.href = fallback;
         });
