@@ -914,7 +914,6 @@ function renderTodoItem(todo) {
     <span class="todo-drag-handle">⠿</span>
     <div class="todo-item-wrapper">
       <input type="text" class="todo-item-input" value="${todo.text}" placeholder="What do you want to accomplish?" />
-      <span class="todo-item-hint">hold enter to lock in · shift+enter new item</span>
     </div>
     <button class="todo-delete">\u2715</button>
   `;
@@ -927,28 +926,6 @@ function renderTodoItem(todo) {
   input.addEventListener('input', () => {
     todo.text = input.value;
     updateTodoActions(div, todo);
-    const hint = div.querySelector('.todo-item-hint');
-    if (hint) {
-      // Create a temporary span to measure text width
-      const measureSpan = document.createElement('span');
-      measureSpan.style.cssText = 'position:absolute;visibility:hidden;font:inherit;white-space:pre';
-      measureSpan.textContent = input.value || '';
-      input.parentElement.appendChild(measureSpan);
-
-      const textWidth = measureSpan.offsetWidth;
-      const wrapperWidth = input.parentElement.offsetWidth;
-      const hintWidth = hint.offsetWidth || 200; // fallback if hidden
-      const margin = 16; // buffer space
-
-      measureSpan.remove();
-
-      // Hide hint when text approaches collision zone
-      if (textWidth > wrapperWidth - hintWidth - margin) {
-        hint.style.display = 'none';
-      } else {
-        hint.style.display = '';
-      }
-    }
   });
 
   // Track Enter hold state per input

@@ -416,7 +416,7 @@ button:active {
 .todo-item-input {
   flex: 1;
   font-size: 14px;
-  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-family: Georgia, serif;
   background: transparent;
   border: none;
   outline: none;
@@ -426,7 +426,7 @@ button:active {
 }
 
 .todo-item:first-child .todo-item-input {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .todo-item-input::placeholder {
@@ -434,27 +434,6 @@ button:active {
   font-style: italic;
 }
 
-.todo-item-hint {
-  color: rgba(78, 122, 140, 0.25);
-  font-size: 9px;
-  font-family: 'DM Sans', sans-serif;
-  font-style: normal;
-  display: none;
-  pointer-events: none;
-  white-space: nowrap;
-  transition: opacity 0.15s;
-  margin-left: 8px;
-  letter-spacing: 0.2px;
-}
-
-.todo-item-input:focus ~ .todo-item-hint {
-  display: inline;
-  opacity: 0.7;
-}
-
-.todo-item-input:placeholder-shown:focus ~ .todo-item-hint {
-  display: none;
-}
 
 .todo-edit-input {
   flex: 1;
@@ -944,7 +923,7 @@ button:active {
   display: flex;
   gap: 16px;
   font-size: 10px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: Georgia, serif;
   color: rgba(78, 122, 140, 0.18);
   font-weight: 500;
 }
