@@ -164,7 +164,7 @@ jobs:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           KEYCHAIN_PATH: ${{ runner.temp }}/app-signing.keychain-db
           DEBUG: "electron-forge:*,electron-osx-sign:*,@electron/notarize:*,electron-packager:*"
-        run: npm run publish
+        run: npm run publish -- --arch=universal
 
       - name: Clean up keychain
         if: always()
