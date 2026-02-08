@@ -95,7 +95,6 @@ if (currentGoal) {
   goalInput.classList.add('hidden');
   goalDisplay.classList.remove('hidden');
   goalDisplay.textContent = currentGoal;
-  goalDisplay.title = 'Go to settings to change your goal';
 } else {
   // Show input state
   goalInput.classList.remove('hidden');
@@ -118,7 +117,6 @@ function lockInGoal(text) {
   goalInput.classList.add('hidden');
   goalDisplay.classList.remove('hidden');
   goalDisplay.textContent = currentGoal;
-  goalDisplay.title = 'Go to settings to change your goal';
 }
 
 // Goal button in dropdown - open goal panel
@@ -887,7 +885,7 @@ function updateTodoActions(div, todo) {
         setTimeout(() => {
           div.classList.remove('shake');
           input.placeholder = 'What do you want to accomplish?';
-        }, 1500);
+        }, 800);
       }
     });
     div.appendChild(lockInBtn);
@@ -982,6 +980,15 @@ function renderTodoItem(todo) {
             const task = todos[0].text.trim();
             enterLockedInMode(task);
           });
+        } else if (todos.indexOf(todo) === 0 && !todo.text.trim()) {
+          // Shake the first todo if empty
+          input.placeholder = 'Enter a task to lock in';
+          div.classList.add('shake');
+          input.focus();
+          setTimeout(() => {
+            div.classList.remove('shake');
+            input.placeholder = 'What do you want to accomplish?';
+          }, 800);
         }
       }
     }
