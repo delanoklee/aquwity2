@@ -1,11 +1,16 @@
 const path = require('path');
 const { app, BrowserWindow, desktopCapturer, ipcMain, screen, globalShortcut, Menu, shell } = require('electron');
 const fs = require('fs');
+const { createClient } = require('@supabase/supabase-js');
 
 // ============================================
 // CONFIGURATION
 // ============================================
 const API_URL = 'https://api.aquwity.com';
+const supabase = createClient(
+  'https://clamoycyzwyizqctlhcs.supabase.co',
+  'sb_publishable_MwdE7DkNUKv6406TmcMt0g_3NnXDh0J'
+);
 
 // ============================================
 // STATE
@@ -146,6 +151,20 @@ function clearSession() {
   authSession = null;
   if (authPath && fs.existsSync(authPath)) {
     fs.unlinkSync(authPath);
+  }
+}
+
+// Update lock_status in Supabase to lock/unlock iPhone apps
+async function updateLockStatus(isLocked) {
+  if (!authSession?.user?.id) return;
+  try {
+    const { error } = await supabase
+      .from('lock_status')
+      .update({ is_locked: isLocked })
+      .eq('user_id', authSession.user.id);
+    if (error) console.error('lock_status update error:', error.message);
+  } catch (err) {
+    console.error('lock_status update failed:', err.message);
   }
 }
 
@@ -410,11 +429,13 @@ ipcMain.handle('get-history', () => {
 ipcMain.on('start-tracking', () => {
   taskStartTime = Date.now();
   startTracking();
+  updateLockStatus(true);
 });
 
 ipcMain.on('stop-tracking', () => {
   taskStartTime = null;
   stopTracking();
+  updateLockStatus(false);
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.setAlwaysOnTop(false);
     mainWindow.webContents.send('off-task-level', false);
@@ -636,6 +657,7 @@ app.whenReady().then(() => {
       offTaskCount = 0;
       currentTask = '';
       taskStartTime = null;
+      updateLockStatus(false);
     }
   });
   console.log('Shortcut registered:', registered);

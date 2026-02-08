@@ -26,6 +26,7 @@
     "electron": "^40.1.0"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.95.3",
     "electron-squirrel-startup": "^1.0.1"
   }
 }
