@@ -158,11 +158,16 @@ function clearSession() {
 async function updateLockStatus(isLocked) {
   if (!authSession?.user?.id) return;
   try {
-    const { error } = await supabase
-      .from('lock_status')
-      .update({ is_locked: isLocked })
-      .eq('user_id', authSession.user.id);
-    if (error) console.error('lock_status update error:', error.message);
+    await fetch('https://clamoycyzwyizqctlhcs.supabase.co/rest/v1/lock_status?user_id=eq.' + authSession.user.id, {
+      method: 'PATCH',
+      headers: {
+        'apikey': 'sb_publishable_MwdE7DkNUKv6406TmcMt0g_3NnXDh0J',
+        'Authorization': 'Bearer ' + authSession.access_token,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify({ is_locked: isLocked, updated_at: new Date().toISOString() })
+    });
   } catch (err) {
     console.error('lock_status update failed:', err.message);
   }
