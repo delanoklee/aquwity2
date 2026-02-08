@@ -1,82 +1,1113 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aquwity - Stay Focused and Get More Done</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aquwity — Your attention is the most valuable thing you own</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cream:       #f0e2c4;
+      --cream-light: #f7f0e0;
+      --parchment:   #faf4e8;
+      --blue:        #4e7a8c;
+      --blue-light:  #6a9aaa;
+      --blue-dark:   #3d6070;
+      --blue-deep:   #1a2a30;
+      --ink:         #2c3e47;
+      --sage:        #b8cfa0;
+      --sage-dark:   #8aad6e;
+      --rose:        #c0706a;
+      --warm-brown:  #8b7355;
+      --gold:        #c4a265;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--cream-light);
+      color: var(--ink);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Texture & atmosphere ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 20% 0%, rgba(184, 207, 160, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(78, 122, 140, 0.06) 0%, transparent 45%),
+        radial-gradient(ellipse at 50% 80%, rgba(192, 112, 106, 0.04) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      opacity: 0.025;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    section, nav, footer { position: relative; z-index: 1; }
+
+    /* ── Reveal animations ── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+                  transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+    .delay-1 { transition-delay: 0.1s; }
+    .delay-2 { transition-delay: 0.2s; }
+    .delay-3 { transition-delay: 0.3s; }
+    .delay-4 { transition-delay: 0.4s; }
+    .delay-5 { transition-delay: 0.5s; }
+
+    /* ══════════════════════════════
+       NAVIGATION
+    ══════════════════════════════ */
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 48px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .nav-logo-text {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--ink);
+      letter-spacing: 1px;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: var(--blue-dark);
+      font-size: 14px;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--blue); }
+
+    .nav-cta {
+      padding: 9px 22px !important;
+      background: var(--blue);
+      color: var(--parchment) !important;
+      border-radius: 8px;
+      font-weight: 600 !important;
+      font-size: 13px !important;
+      transition: background 0.2s, transform 0.15s !important;
+    }
+
+    .nav-cta:hover {
+      background: var(--blue-dark);
+      transform: translateY(-1px);
+    }
+
+    /* ══════════════════════════════
+       HERO
+    ══════════════════════════════ */
+    .hero {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 64px 48px 80px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 64px;
+      align-items: center;
+    }
+
+    .hero-content { max-width: 520px; }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      background: rgba(78, 122, 140, 0.08);
+      border: 1px solid rgba(78, 122, 140, 0.12);
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--blue);
+      letter-spacing: 0.5px;
+      margin-bottom: 24px;
+    }
+
+    .hero-badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--sage);
+      animation: pulse-badge 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-badge {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+
+    .hero h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(38px, 5vw, 60px);
+      font-weight: 600;
+      color: var(--ink);
+      line-height: 1.08;
+      letter-spacing: -0.5px;
+      margin-bottom: 20px;
+    }
+
+    .hero h1 em {
+      font-style: italic;
+      color: var(--blue);
+    }
+
+    .hero-sub {
+      font-size: 17px;
+      line-height: 1.7;
+      color: var(--warm-brown);
+      margin-bottom: 36px;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      border-radius: 10px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      letter-spacing: 0.2px;
+    }
+
+    .btn-primary {
+      background: var(--blue);
+      color: var(--parchment);
+      box-shadow: 0 4px 20px rgba(78, 122, 140, 0.25);
+    }
+
+    .btn-primary:hover {
+      background: var(--blue-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(78, 122, 140, 0.3);
+    }
+
+    .btn-secondary {
+      background: rgba(78, 122, 140, 0.06);
+      color: var(--blue-dark);
+      border: 1px solid rgba(78, 122, 140, 0.15);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(78, 122, 140, 0.12);
+      transform: translateY(-2px);
+    }
+
+    .btn-icon { font-size: 16px; }
+
+    .download-links {
+      margin-top: 16px;
+      font-size: 13px;
+    }
+
+    .download-links a {
+      color: var(--blue);
+      text-decoration: none;
+      opacity: 0.5;
+      transition: opacity 0.2s;
+    }
+
+    .download-links a:hover { opacity: 1; }
+
+    /* ── Stacked mockups ── */
+    .hero-mockups {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      position: relative;
+    }
+
+    .mockup-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--blue);
+      opacity: 0.4;
+      margin-bottom: -8px;
+    }
+
+    /* ── Normal mode mockup ── */
+    .mockup-window {
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow:
+        0 16px 48px rgba(44, 62, 71, 0.12),
+        0 4px 12px rgba(44, 62, 71, 0.06),
+        0 0 0 1px rgba(44, 62, 71, 0.04);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .mockup-window:hover {
+      transform: translateY(-3px);
+      box-shadow:
+        0 20px 60px rgba(44, 62, 71, 0.15),
+        0 6px 16px rgba(44, 62, 71, 0.08),
+        0 0 0 1px rgba(44, 62, 71, 0.05);
+    }
+
+    .mockup-titlebar {
+      background: var(--blue);
+      padding: 3px 10px;
+      font-size: 10px;
+      font-weight: 600;
+      text-align: center;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: rgba(240, 226, 196, 0.7);
+    }
+
+    .mockup-body {
+      background: var(--parchment);
+      padding: 12px 16px 16px;
+    }
+
+    .mockup-todo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 0;
+      border-bottom: 1px solid rgba(61, 90, 107, 0.06);
+    }
+
+    .mockup-todo:last-child { border-bottom: none; }
+
+    .mockup-drag {
+      color: rgba(78, 122, 140, 0.2);
+      font-size: 12px;
+    }
+
+    .mockup-task {
+      flex: 1;
+      font-family: Georgia, serif;
+      font-size: 13px;
+      color: var(--ink);
+    }
+
+    .mockup-task.muted { color: rgba(78, 122, 140, 0.35); }
+
+    .mockup-lock-btn {
+      font-size: 10px;
+      font-weight: 600;
+      color: rgba(78, 122, 140, 0.45);
+      padding: 3px 10px;
+      border-radius: 5px;
+      background: rgba(78, 122, 140, 0.06);
+      white-space: nowrap;
+    }
+
+    .mockup-footer {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(78, 122, 140, 0.06);
+      font-size: 9px;
+      color: rgba(78, 122, 140, 0.18);
+      font-family: Georgia, serif;
+    }
+
+    /* ── Locked-in mockup ── */
+    .mockup-locked {
+      border-radius: 14px;
+      overflow: hidden;
+      background: var(--blue-deep);
+      box-shadow:
+        0 16px 48px rgba(26, 42, 48, 0.25),
+        0 0 0 1px rgba(255, 255, 255, 0.03);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .mockup-locked:hover {
+      transform: translateY(-3px);
+      box-shadow:
+        0 20px 60px rgba(26, 42, 48, 0.3),
+        0 0 0 1px rgba(255, 255, 255, 0.04);
+    }
+
+    .mockup-locked-body {
+      padding: 24px 20px 18px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    .mockup-locked-body::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(78, 122, 140, 0.08) 0%, transparent 70%);
+    }
+
+    .mockup-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 12px;
+      position: relative;
+    }
+
+    .mockup-status-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--sage);
+      animation: pulse-badge 2s ease-in-out infinite;
+    }
+
+    .mockup-status-label {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: rgba(240, 226, 196, 0.25);
+    }
+
+    .mockup-locked-task {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 16px;
+      font-weight: 500;
+      color: #e8dcc4;
+      text-align: center;
+      position: relative;
+    }
+
+    .mockup-locked-hints {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      margin-top: 14px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(240, 226, 196, 0.06);
+      font-size: 8px;
+      color: rgba(240, 226, 196, 0.15);
+      position: relative;
+    }
+
+    .mockup-hint-key {
+      display: inline-block;
+      padding: 1px 3px;
+      border-radius: 2px;
+      background: rgba(240, 226, 196, 0.05);
+      border: 1px solid rgba(240, 226, 196, 0.06);
+      font-size: 7px;
+      margin-right: 2px;
+    }
+
+    /* ── Transition arrow between mockups ── */
+    .mockup-transition {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 4px 0;
+      color: rgba(78, 122, 140, 0.2);
+    }
+
+    .mockup-transition-line {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(78, 122, 140, 0.12), transparent);
+    }
+
+    .mockup-transition-text {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    /* ══════════════════════════════
+       DIVIDER
+    ══════════════════════════════ */
+    .divider {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 0 48px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .divider-line {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(78, 122, 140, 0.15), transparent);
+    }
+
+    .divider-leaf {
+      color: var(--sage);
+      font-size: 16px;
+      opacity: 0.4;
+    }
+
+    /* ══════════════════════════════
+       FEATURES
+    ══════════════════════════════ */
+    .features {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 80px 48px;
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--blue);
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 600;
+      color: var(--ink);
+      text-align: center;
+      margin-bottom: 56px;
+      line-height: 1.15;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .feature-card {
+      background: var(--parchment);
+      border-radius: 16px;
+      padding: 36px 28px;
+      border: 1px solid rgba(78, 122, 140, 0.06);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .feature-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(44, 62, 71, 0.08);
+      border-color: rgba(78, 122, 140, 0.12);
+    }
+
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      margin-bottom: 20px;
+    }
+
+    .feature-icon.blue { background: rgba(78, 122, 140, 0.1); }
+    .feature-icon.sage { background: rgba(184, 207, 160, 0.15); }
+    .feature-icon.rose { background: rgba(192, 112, 106, 0.1); }
+
+    .feature-card h3 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 10px;
+    }
+
+    .feature-card p {
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--warm-brown);
+    }
+
+    /* ══════════════════════════════
+       HOW IT WORKS
+    ══════════════════════════════ */
+    .how-it-works {
+      background: var(--blue-deep);
+      padding: 80px 48px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .how-it-works::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 30% 20%, rgba(78, 122, 140, 0.12) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 80%, rgba(184, 207, 160, 0.06) 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    .how-it-works .section-label { color: var(--blue-light); }
+    .how-it-works .section-title { color: var(--cream); }
+
+    .steps {
+      max-width: 900px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .steps::before {
+      content: '';
+      position: absolute;
+      left: 23px;
+      top: 24px;
+      bottom: 24px;
+      width: 1px;
+      background: linear-gradient(to bottom, rgba(106, 154, 170, 0.3), rgba(184, 207, 160, 0.2));
+    }
+
+    .step {
+      display: flex;
+      gap: 28px;
+      align-items: flex-start;
+      padding: 24px 0;
+      position: relative;
+    }
+
+    .step-number {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(78, 122, 140, 0.15);
+      border: 1px solid rgba(106, 154, 170, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--blue-light);
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    .step-content h3 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--cream);
+      margin-bottom: 6px;
+    }
+
+    .step-content p {
+      font-size: 14px;
+      line-height: 1.7;
+      color: rgba(240, 226, 196, 0.45);
+    }
+
+    /* ══════════════════════════════
+       PRICING
+    ══════════════════════════════ */
+    .pricing {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 80px 48px;
+    }
+
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+      max-width: 780px;
+      margin: 0 auto;
+    }
+
+    .pricing-card {
+      background: var(--parchment);
+      border-radius: 16px;
+      padding: 40px 32px;
+      border: 1px solid rgba(78, 122, 140, 0.08);
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    .pricing-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(44, 62, 71, 0.06);
+    }
+
+    .pricing-card.featured {
+      border-color: var(--blue);
+      box-shadow: 0 4px 24px rgba(78, 122, 140, 0.12);
+    }
+
+    .pricing-badge {
+      position: absolute;
+      top: -10px;
+      right: 24px;
+      background: var(--blue);
+      color: var(--parchment);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 6px;
+    }
+
+    .pricing-card h3 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 26px;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 4px;
+    }
+
+    .pricing-card .price {
+      font-size: 36px;
+      font-weight: 700;
+      color: var(--blue);
+      margin: 16px 0 4px;
+    }
+
+    .pricing-card .price span {
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--warm-brown);
+    }
+
+    .pricing-card .price-note {
+      font-size: 12px;
+      color: rgba(78, 122, 140, 0.4);
+      margin-bottom: 24px;
+    }
+
+    .pricing-features {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .pricing-features li {
+      font-size: 14px;
+      color: var(--warm-brown);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .pricing-check {
+      color: var(--sage-dark);
+      font-weight: 700;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .pricing-card .btn { width: 100%; justify-content: center; }
+
+    /* ══════════════════════════════
+       FINAL CTA
+    ══════════════════════════════ */
+    .final-cta {
+      text-align: center;
+      padding: 80px 48px 100px;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .final-cta h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(28px, 4vw, 40px);
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 16px;
+      line-height: 1.15;
+    }
+
+    .final-cta p {
+      font-size: 16px;
+      color: var(--warm-brown);
+      margin-bottom: 32px;
+      line-height: 1.6;
+    }
+
+    /* ══════════════════════════════
+       FOOTER
+    ══════════════════════════════ */
+    footer {
+      background: var(--blue-deep);
+      padding: 48px;
+      text-align: center;
+    }
+
+    .footer-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .footer-logo-text {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--cream);
+      letter-spacing: 1px;
+    }
+
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 28px;
+      margin-bottom: 24px;
+      list-style: none;
+    }
+
+    .footer-links a {
+      text-decoration: none;
+      font-size: 13px;
+      color: rgba(240, 226, 196, 0.35);
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover { color: rgba(240, 226, 196, 0.6); }
+
+    .footer-copy {
+      font-size: 12px;
+      color: rgba(240, 226, 196, 0.2);
+    }
+
+    /* ══════════════════════════════
+       RESPONSIVE
+    ══════════════════════════════ */
+    @media (max-width: 900px) {
+      .hero {
+        grid-template-columns: 1fr;
+        text-align: center;
+        gap: 48px;
+        padding: 48px 24px 64px;
+      }
+      .hero-content {
+        max-width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .hero-sub { text-align: center; }
+      .hero-actions { justify-content: center; }
+      .hero-mockups { max-width: 380px; margin: 0 auto; }
+    }
+
+    @media (max-width: 768px) {
+      nav { padding: 16px 24px; }
+      .nav-links { gap: 16px; }
+      .features { padding: 48px 24px; }
+      .features-grid { grid-template-columns: 1fr; }
+      .how-it-works { padding: 48px 24px; }
+      .pricing { padding: 48px 24px; }
+      .pricing-grid { grid-template-columns: 1fr; max-width: 400px; }
+      .final-cta { padding: 48px 24px 64px; }
+    }
+  </style>
 </head>
 <body>
-    <main class="hero">
-        <img src="logo.png" alt="Aquwity Logo" class="logo">
-        <h1 class="app-name">Aquwity</h1>
-        <p class="subtitle">The app that helps you stay focused and get more done.</p>
-        <div class="button-group">
-            <a id="download-btn" href="#" class="btn btn-primary">Download for Your OS</a>
-            <a href="https://calendly.com/delanklee/30min" class="btn btn-outline">Book a Demo</a>
+
+  <!-- ══ NAV ══ -->
+  <nav>
+    <a href="#" class="nav-logo">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+        <path d="M16 3C9 3 4 9.5 4 16s5 13 12 13 12-6.5 12-13S23 3 16 3Z" fill="none" stroke="#4e7a8c" stroke-width="1.5" opacity="0.3"/>
+        <circle cx="16" cy="16" r="7" fill="none" stroke="#4e7a8c" stroke-width="1.5"/>
+        <circle cx="16" cy="16" r="2.5" fill="#b8cfa0"/>
+        <path d="M16 3C16 3 18.5 7.5 18.5 10" stroke="#b8cfa0" stroke-width="1" stroke-linecap="round" opacity="0.6"/>
+      </svg>
+      <span class="nav-logo-text">Aquwity</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#pricing">Pricing</a></li>
+      <li><a href="#download" class="nav-cta">Try free</a></li>
+    </ul>
+  </nav>
+
+  <!-- ══ HERO ══ -->
+  <section class="hero">
+    <div class="hero-content">
+      <div class="hero-badge reveal delay-1">
+        <span class="hero-badge-dot"></span>
+        Now in early access
+      </div>
+      <h1 class="reveal delay-2">Your attention is the most valuable thing you own</h1>
+      <p class="hero-sub reveal delay-3">Aquwity is the app that helps you stay focused.</p>
+      <div class="hero-actions reveal delay-4">
+        <a id="download-btn" href="#" class="btn btn-primary">Try it for free</a>
+        <a href="https://calendly.com/delanklee/30min" class="btn btn-secondary">Book a demo</a>
+      </div>
+
+    </div>
+
+    <div class="hero-mockups reveal delay-5">
+      <span class="mockup-label">Plan your tasks</span>
+      <div class="mockup-window">
+        <div class="mockup-titlebar">Build Aquwity MVP</div>
+        <div class="mockup-body">
+          <div class="mockup-todo">
+            <span class="mockup-drag">⠿</span>
+            <span class="mockup-task">Fix Screen Time integration</span>
+            <span class="mockup-lock-btn">Lock in →</span>
+          </div>
+          <div class="mockup-todo">
+            <span class="mockup-drag">⠿</span>
+            <span class="mockup-task muted">Design onboarding flow</span>
+          </div>
+          <div class="mockup-todo">
+            <span class="mockup-drag">⠿</span>
+            <span class="mockup-task muted">Write App Store copy</span>
+          </div>
+          <div class="mockup-footer">
+            <span>Hold Enter to lock in</span>
+            <span>Shift + Enter new task</span>
+          </div>
         </div>
-        <p class="description">
-            A simple, distraction-free focus app that helps you stay on track.
-        </p>
-        <p class="download-links">
-            <a id="link-windows" href="#">Windows</a> |
-            <a id="link-linux" href="#">Linux</a> |
-            <a id="link-macos" href="#">macOS</a>
-        </p>
-    </main>
-    <script>
-        // Fetch latest release from GitHub API and set download links
-        const REPO = 'delanoklee/aquwity2';
+      </div>
 
-        async function setupDownloadLinks() {
-            try {
-                const response = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`);
-                const release = await response.json();
+      <div class="mockup-transition">
+        <span class="mockup-transition-line"></span>
+        <span class="mockup-transition-text">Hold Enter</span>
+        <span class="mockup-transition-line"></span>
+      </div>
 
-                // Find assets by file extension/pattern
-                const assets = release.assets || [];
-                const windowsAsset = assets.find(a => a.name.endsWith('.exe'));
-                const linuxAsset = assets.find(a => a.name.endsWith('.deb'));
-                const macosAsset = assets.find(a => a.name.endsWith('.dmg'));
+      <span class="mockup-label">Lock in & focus</span>
+      <div class="mockup-locked">
+        <div class="mockup-locked-body">
+          <div class="mockup-status">
+            <div class="mockup-status-dot"></div>
+            <span class="mockup-status-label">Focused</span>
+          </div>
+          <span class="mockup-locked-task">Fix Screen Time integration</span>
+          <div class="mockup-locked-hints">
+            <span><span class="mockup-hint-key">⌫</span> hold to exit</span>
+            <span><span class="mockup-hint-key">⌃⇧D</span> complete</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-                // Update individual download links
-                if (windowsAsset) document.getElementById('link-windows').href = windowsAsset.browser_download_url;
-                if (linuxAsset) document.getElementById('link-linux').href = linuxAsset.browser_download_url;
-                if (macosAsset) document.getElementById('link-macos').href = macosAsset.browser_download_url;
+  <div class="divider">
+    <span class="divider-line"></span>
+    <span class="divider-leaf">✦</span>
+    <span class="divider-line"></span>
+  </div>
 
-                // Update main download button based on OS
-                const btn = document.getElementById('download-btn');
-                const ua = navigator.userAgent.toLowerCase();
 
-                if (ua.includes('win') && windowsAsset) {
-                    btn.textContent = 'Download for Windows';
-                    btn.href = windowsAsset.browser_download_url;
-                } else if (ua.includes('mac') && macosAsset) {
-                    btn.textContent = 'Download for macOS';
-                    btn.href = macosAsset.browser_download_url;
-                } else if (ua.includes('linux') && linuxAsset) {
-                    btn.textContent = 'Download for Linux';
-                    btn.href = linuxAsset.browser_download_url;
-                } else if (windowsAsset) {
-                    // Default to Windows if OS not detected
-                    btn.href = windowsAsset.browser_download_url;
-                }
-            } catch (error) {
-                console.error('Failed to fetch release info:', error);
-                // Fallback to generic releases page
-                const fallback = `https://github.com/${REPO}/releases/latest`;
-                document.getElementById('download-btn').href = fallback;
-                document.getElementById('link-windows').href = fallback;
-                document.getElementById('link-linux').href = fallback;
-                document.getElementById('link-macos').href = fallback;
-            }
+
+  <!-- ══ HOW IT WORKS ══ -->
+  <section class="how-it-works" id="how">
+    <p class="section-label reveal">How it works</p>
+    <h2 class="section-title reveal delay-1">Three steps to focus</h2>
+    <div class="steps">
+      <div class="step reveal delay-2">
+        <div class="step-number">1</div>
+        <div class="step-content">
+          <h3>Write your task</h3>
+          <p>Add what you want to accomplish. Be specific — "Write intro for pitch deck" works better than "Work on pitch."</p>
+        </div>
+      </div>
+      <div class="step reveal delay-3">
+        <div class="step-number">2</div>
+        <div class="step-content">
+          <h3>Lock in</h3>
+          <p>Hold Enter or click Lock In. Your window goes dark, showing only your current task. Aquwity starts watching your screen in the background.</p>
+        </div>
+      </div>
+      <div class="step reveal delay-4">
+        <div class="step-number">3</div>
+        <div class="step-content">
+          <h3>Stay on track</h3>
+          <p>If you drift — scrolling Twitter, browsing Reddit — Aquwity notices. The bar warms to red, then locks distracting apps on your phone. Get back on task and everything resets.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ PRICING ══ -->
+  <section class="pricing" id="pricing">
+    <p class="section-label reveal">Pricing</p>
+    <h2 class="section-title reveal delay-1">Start free, upgrade when<br/>you're ready</h2>
+    <div class="pricing-grid">
+      <div class="pricing-card reveal delay-2">
+        <h3>Free</h3>
+        <div class="price">$0</div>
+        <p class="price-note">Forever</p>
+        <ul class="pricing-features">
+          <li><span class="pricing-check">✓</span> Task list & lock-in mode</li>
+          <li><span class="pricing-check">✓</span> AI screen analysis</li>
+          <li><span class="pricing-check">✓</span> Basic focus reports</li>
+          <li><span class="pricing-check">✓</span> 5 analyses per hour</li>
+        </ul>
+        <a href="#download" class="btn btn-secondary">Try it free</a>
+      </div>
+      <div class="pricing-card featured reveal delay-3">
+        <span class="pricing-badge">Popular</span>
+        <h3>Pro</h3>
+        <div class="price">$8 <span>/ month</span></div>
+        <p class="price-note">Billed monthly</p>
+        <ul class="pricing-features">
+          <li><span class="pricing-check">✓</span> Everything in Free</li>
+          <li><span class="pricing-check">✓</span> iOS distraction blocking</li>
+          <li><span class="pricing-check">✓</span> Unlimited analyses</li>
+          <li><span class="pricing-check">✓</span> Detailed activity breakdown</li>
+          <li><span class="pricing-check">✓</span> Weekly focus insights</li>
+        </ul>
+        <a href="#download" class="btn btn-primary">Start free trial</a>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider">
+    <span class="divider-line"></span>
+    <span class="divider-leaf">✦</span>
+    <span class="divider-line"></span>
+  </div>
+
+  <!-- ══ FINAL CTA ══ -->
+  <section class="final-cta" id="download">
+    <h2 class="reveal">Every hour you lose to distraction<br/>is one you don't get back</h2>
+    <p class="reveal delay-1">The goals you care about most deserve your full attention. Aquwity helps you give it to them.</p>
+    <div class="hero-actions reveal delay-2">
+      <a id="download-btn-bottom" href="#" class="btn btn-primary">Try it for free</a>
+      <a href="https://calendly.com/delanklee/30min" class="btn btn-secondary">Book a demo</a>
+    </div>
+  </section>
+
+  <!-- ══ FOOTER ══ -->
+  <footer>
+    <div class="footer-logo">
+      <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+        <path d="M16 3C9 3 4 9.5 4 16s5 13 12 13 12-6.5 12-13S23 3 16 3Z" fill="none" stroke="#6a9aaa" stroke-width="1.5" opacity="0.3"/>
+        <circle cx="16" cy="16" r="7" fill="none" stroke="#6a9aaa" stroke-width="1.5"/>
+        <circle cx="16" cy="16" r="2.5" fill="#b8cfa0"/>
+      </svg>
+      <span class="footer-logo-text">Aquwity</span>
+    </div>
+    <ul class="footer-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#pricing">Pricing</a></li>
+      <li><a href="#">Privacy</a></li>
+      <li><a href="#">Support</a></li>
+    </ul>
+    <p class="footer-copy">© 2026 Aquwity. Built for people who want to do their best work.</p>
+  </footer>
+
+  <script>
+    // Scroll reveal
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add('visible');
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+    // GitHub releases auto-download
+    const REPO = 'delanoklee/aquwity2';
+    async function setupDownloadLinks() {
+      try {
+        const response = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`);
+        const release = await response.json();
+        const assets = release.assets || [];
+        const windowsAsset = assets.find(a => a.name.endsWith('.exe'));
+        const linuxAsset = assets.find(a => a.name.endsWith('.deb'));
+        const macosAsset = assets.find(a => a.name.endsWith('.dmg'));
+
+        if (windowsAsset) document.getElementById('link-windows').href = windowsAsset.browser_download_url;
+        if (linuxAsset) document.getElementById('link-linux').href = linuxAsset.browser_download_url;
+        if (macosAsset) document.getElementById('link-macos').href = macosAsset.browser_download_url;
+
+        const btns = [document.getElementById('download-btn'), document.getElementById('download-btn-bottom')];
+        const ua = navigator.userAgent.toLowerCase();
+        let dlUrl = null;
+        let dlLabel = 'Try it for free';
+
+        if (ua.includes('win') && windowsAsset) {
+          dlLabel = 'Download for Windows';
+          dlUrl = windowsAsset.browser_download_url;
+        } else if (ua.includes('mac') && macosAsset) {
+          dlLabel = 'Download for macOS';
+          dlUrl = macosAsset.browser_download_url;
+        } else if (ua.includes('linux') && linuxAsset) {
+          dlLabel = 'Download for Linux';
+          dlUrl = linuxAsset.browser_download_url;
+        } else if (windowsAsset) {
+          dlUrl = windowsAsset.browser_download_url;
         }
 
-        setupDownloadLinks();
-    </script>
+        btns.forEach(btn => {
+          if (btn && dlUrl) { btn.href = dlUrl; btn.textContent = dlLabel; }
+        });
+      } catch (error) {
+        console.error('Failed to fetch release info:', error);
+        const fallback = `https://github.com/${REPO}/releases/latest`;
+        ['download-btn', 'download-btn-bottom', 'link-windows', 'link-linux', 'link-macos'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.href = fallback;
+        });
+      }
+    }
+    setupDownloadLinks();
+  </script>
+
 </body>
 </html>
-
