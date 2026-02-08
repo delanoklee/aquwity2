@@ -102,9 +102,9 @@ body {
 
 #top-bar {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   padding: 10px 14px 18px 14px;
-  gap: 10px;
+  gap: 0;
   background: #faf4e8;
   min-height: 70px;
   flex-shrink: 0;
@@ -116,6 +116,8 @@ body {
 #top-bar.locked-in {
   background: #1e2f36;
   border-bottom-color: transparent;
+  justify-content: center;
+  align-items: center;
 }
 
 /* ── Off-task warning (locked in) ── */
@@ -181,11 +183,9 @@ body {
 }
 
 #top-bar.locked-in #lockedin-task {
-  display: block;
-}
-
-#top-bar.locked-in #logo {
-  display: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 #lockedin-tip {
@@ -238,25 +238,9 @@ button:active {
   transform: scale(0.97);
 }
 
-/* ── Logo ── */
+/* ── Settings Dropdown (replaces logo dropdown) ── */
 
-#logo {
-  height: 46px;
-  width: auto;
-  margin-left: auto;
-  align-self: flex-start;
-  -webkit-app-region: no-drag;
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-
-#logo:hover {
-  opacity: 0.7;
-}
-
-/* ── Logo Dropdown ── */
-
-#logo-dropdown {
+#settings-dropdown {
   background: #e8dcc4;
   padding: 10px;
   display: flex;
@@ -266,11 +250,11 @@ button:active {
   border-top: 1px solid rgba(78, 122, 140, 0.08);
 }
 
-#logo-dropdown.hidden {
+#settings-dropdown.hidden {
   display: none;
 }
 
-#logo-dropdown button {
+#settings-dropdown button {
   display: block;
   width: 100%;
   padding: 10px 16px;
@@ -285,7 +269,7 @@ button:active {
   transition: background 0.2s;
 }
 
-#logo-dropdown button:hover {
+#settings-dropdown button:hover {
   background: rgba(78, 122, 140, 0.15);
 }
 
@@ -486,16 +470,18 @@ button:active {
 
 .todo-delete {
   background: transparent;
-  color: rgba(78, 122, 140, 0.2);
-  font-size: 15px;
-  padding: 2px 4px;
+  color: rgba(78, 122, 140, 0.15);
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 6px;
   opacity: 1;
   transition: color 0.2s;
+  border-radius: 4px;
 }
 
 .todo-delete:hover {
-  opacity: 1;
   color: #c0706a;
+  background: rgba(192, 112, 106, 0.06);
 }
 
 .todo-drag-handle {
@@ -940,4 +926,134 @@ button:active {
 .task-card-completed {
   color: rgba(240, 226, 196, 0.2);
   margin-left: auto;
+}
+
+/* ── Todo Footer (shortcuts + settings) ── */
+
+#todo-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(78, 122, 140, 0.06);
+  -webkit-app-region: no-drag;
+}
+
+#todo-shortcuts {
+  display: flex;
+  gap: 16px;
+  font-size: 10px;
+  font-family: 'DM Sans', sans-serif;
+  color: rgba(78, 122, 140, 0.18);
+  font-weight: 500;
+}
+
+#settings-menu {
+  -webkit-app-region: no-drag;
+}
+
+#settings-dots {
+  cursor: pointer;
+  opacity: 0.15;
+  transition: opacity 0.25s;
+}
+
+#settings-dots:hover {
+  opacity: 0.4;
+}
+
+/* ── New Task Button ── */
+
+#new-task-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  cursor: pointer;
+  border-top: 1px solid rgba(78, 122, 140, 0.06);
+  -webkit-app-region: no-drag;
+}
+
+#new-task-btn:hover .new-task-plus {
+  color: #4e7a8c;
+  transform: rotate(90deg);
+}
+
+#new-task-btn:hover .new-task-text {
+  color: rgba(78, 122, 140, 0.5);
+}
+
+.new-task-plus {
+  font-size: 15px;
+  color: rgba(78, 122, 140, 0.2);
+  font-weight: 300;
+  width: 18px;
+  text-align: center;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.new-task-text {
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  color: rgba(78, 122, 140, 0.2);
+  font-weight: 400;
+  letter-spacing: 0.1px;
+  transition: color 0.2s ease;
+}
+
+/* ── Lock In Button (first todo only) ── */
+
+.todo-lock-in {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(78, 122, 140, 0.06);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+}
+
+.todo-lock-in:hover {
+  background: #4e7a8c;
+  transform: scale(1.04);
+  box-shadow: 0 4px 16px rgba(78, 122, 140, 0.2);
+}
+
+.todo-lock-in-text {
+  font-size: 11px;
+  font-weight: 600;
+  font-family: 'DM Sans', sans-serif;
+  color: rgba(78, 122, 140, 0.5);
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  transition: color 0.2s ease;
+}
+
+.todo-lock-in:hover .todo-lock-in-text {
+  color: #f0e2c4;
+}
+
+.todo-lock-in-arrow {
+  font-size: 11px;
+  color: rgba(78, 122, 140, 0.25);
+  transition: all 0.25s ease;
+}
+
+.todo-lock-in:hover .todo-lock-in-arrow {
+  color: rgba(240, 226, 196, 0.5);
+  transform: translateX(2px);
+}
+
+/* ── Hide elements when locked in ── */
+
+#top-bar.locked-in #todo-footer {
+  display: none;
+}
+
+#top-bar.locked-in #new-task-btn {
+  display: none;
 }

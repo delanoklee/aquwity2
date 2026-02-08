@@ -2,8 +2,8 @@ const topBar = document.getElementById('top-bar');
 const historyPanel = document.getElementById('history-panel');
 const historyList = document.getElementById('history-list');
 const todoList = document.getElementById('todo-list');
-const logo = document.getElementById('logo');
-const logoDropdown = document.getElementById('logo-dropdown');
+const settingsDots = document.getElementById('settings-dots');
+const settingsDropdown = document.getElementById('settings-dropdown');
 const historyBtn = document.getElementById('history-btn');
 const reportBtn = document.getElementById('report-btn');
 const reportPanel = document.getElementById('report-panel');
@@ -22,7 +22,7 @@ let isLockedIn = false;
 let isExpanded = false;
 let isReportOpen = false;
 let isGoalPanelOpen = false;
-let isLogoDropdownOpen = false;
+let isSettingsOpen = false;
 let todoListShownInLockedIn = false;
 let todos = [];
 let currentGoal = localStorage.getItem('acuity-goal') || '';
@@ -124,8 +124,8 @@ function lockInGoal(text) {
 // Goal button in dropdown - open goal panel
 goalBtn.addEventListener('click', () => {
   // Close dropdown
-  isLogoDropdownOpen = false;
-  logoDropdown.classList.add('hidden');
+  isSettingsOpen = false;
+  settingsDropdown.classList.add('hidden');
 
   // Close other panels
   if (isExpanded) {
@@ -170,7 +170,7 @@ function updateTodoVisibility() {
 
 // Close history/report/goal panels and dropdown when clicking outside the app
 window.addEventListener('blur', () => {
-  const wasOpen = isExpanded || isReportOpen || isGoalPanelOpen || isLogoDropdownOpen;
+  const wasOpen = isExpanded || isReportOpen || isGoalPanelOpen || isSettingsOpen;
   if (isExpanded) {
     isExpanded = false;
     historyPanel.classList.add('hidden');
@@ -183,9 +183,9 @@ window.addEventListener('blur', () => {
     isGoalPanelOpen = false;
     goalPanel.classList.add('hidden');
   }
-  if (isLogoDropdownOpen) {
-    isLogoDropdownOpen = false;
-    logoDropdown.classList.add('hidden');
+  if (isSettingsOpen) {
+    isSettingsOpen = false;
+    settingsDropdown.classList.add('hidden');
   }
   if (wasOpen) {
     updateTodoVisibility();
@@ -194,12 +194,12 @@ window.addEventListener('blur', () => {
 
 // Close panels when clicking on the top bar
 topBar.addEventListener('click', (e) => {
-  // Don't close if clicking on logo (which toggles dropdown)
-  if (e.target === logo || logo.contains(e.target)) {
+  // Don't close if clicking on settings menu or new task button
+  if (e.target.closest('#settings-menu') || e.target.closest('#new-task-btn')) {
     return;
   }
 
-  const wasOpen = isExpanded || isReportOpen || isGoalPanelOpen || isLogoDropdownOpen;
+  const wasOpen = isExpanded || isReportOpen || isGoalPanelOpen || isSettingsOpen;
 
   if (isExpanded) {
     isExpanded = false;
@@ -214,9 +214,9 @@ topBar.addEventListener('click', (e) => {
     isGoalPanelOpen = false;
     goalPanel.classList.add('hidden');
   }
-  if (isLogoDropdownOpen) {
-    isLogoDropdownOpen = false;
-    logoDropdown.classList.add('hidden');
+  if (isSettingsOpen) {
+    isSettingsOpen = false;
+    settingsDropdown.classList.add('hidden');
   }
 
   if (wasOpen) {
@@ -371,8 +371,8 @@ function enterLockedInMode(task) {
   reportPanel.classList.add('hidden');
   isGoalPanelOpen = false;
   goalPanel.classList.add('hidden');
-  isLogoDropdownOpen = false;
-  logoDropdown.classList.add('hidden');
+  isSettingsOpen = false;
+  settingsDropdown.classList.add('hidden');
 
   // Enter locked-in state
   taskStartTime = Date.now();
@@ -393,8 +393,8 @@ function enterLockedInMode(task) {
   });
 }
 
-// Toggle logo dropdown
-logo.addEventListener('click', () => {
+// Toggle settings dropdown
+settingsDots.addEventListener('click', () => {
   // Close other panels if open
   if (isExpanded) {
     isExpanded = false;
@@ -410,12 +410,12 @@ logo.addEventListener('click', () => {
     goalPanel.classList.add('hidden');
   }
 
-  isLogoDropdownOpen = !isLogoDropdownOpen;
-  if (isLogoDropdownOpen) {
-    logoDropdown.classList.remove('hidden');
+  isSettingsOpen = !isSettingsOpen;
+  if (isSettingsOpen) {
+    settingsDropdown.classList.remove('hidden');
     window.acuity.resizeWindow(getBaseHeight() + 150);
   } else {
-    logoDropdown.classList.add('hidden');
+    settingsDropdown.classList.add('hidden');
     updateTodoVisibility();
   }
 });
@@ -423,8 +423,8 @@ logo.addEventListener('click', () => {
 // History button
 historyBtn.addEventListener('click', async () => {
   // Close dropdown
-  isLogoDropdownOpen = false;
-  logoDropdown.classList.add('hidden');
+  isSettingsOpen = false;
+  settingsDropdown.classList.add('hidden');
 
   // Close report if open
   if (isReportOpen) {
@@ -449,8 +449,8 @@ historyBtn.addEventListener('click', async () => {
 // Report button
 reportBtn.addEventListener('click', async () => {
   // Close dropdown
-  isLogoDropdownOpen = false;
-  logoDropdown.classList.add('hidden');
+  isSettingsOpen = false;
+  settingsDropdown.classList.add('hidden');
 
   // Close history if open
   if (isExpanded) {
@@ -858,6 +858,47 @@ document.addEventListener('mousedown', (e) => {
   dragFromHandle = e.target.classList.contains('todo-drag-handle');
 });
 
+function updateTodoActions(div, todo) {
+  const isFirst = todos.indexOf(todo) === 0;
+  const deleteBtn = div.querySelector('.todo-delete');
+
+  // Remove existing lock-in button if any
+  const existingLockIn = div.querySelector('.todo-lock-in');
+  if (existingLockIn) existingLockIn.remove();
+
+  if (isFirst && todo.text.trim()) {
+    // Hide delete, show lock-in
+    deleteBtn.style.display = 'none';
+    const lockInBtn = document.createElement('div');
+    lockInBtn.className = 'todo-lock-in';
+    lockInBtn.innerHTML = `
+      <span class="todo-lock-in-text">Lock in</span>
+      <span class="todo-lock-in-arrow">\u2192</span>
+    `;
+    lockInBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      enterLockedInMode(todo.text.trim());
+    });
+    div.appendChild(lockInBtn);
+  } else if (isFirst && !todo.text.trim()) {
+    // First item, no text - show delete as ✕
+    deleteBtn.textContent = '\u2715';
+    deleteBtn.style.display = '';
+  } else {
+    // Non-first items - show minus button
+    deleteBtn.textContent = '\u2212';
+    deleteBtn.style.display = '';
+  }
+}
+
+function refreshAllTodoActions() {
+  todoList.querySelectorAll('.todo-item').forEach(item => {
+    const todoId = parseInt(item.dataset.id);
+    const todo = todos.find(t => t.id === todoId);
+    if (todo) updateTodoActions(item, todo);
+  });
+}
+
 function renderTodoItem(todo) {
   const div = document.createElement('div');
   div.className = 'todo-item';
@@ -870,14 +911,17 @@ function renderTodoItem(todo) {
       <input type="text" class="todo-item-input" value="${todo.text}" placeholder="What do you want to accomplish?" />
       <span class="todo-item-hint">hold enter to lock in · shift+enter new item</span>
     </div>
-    <button class="todo-delete">✕</button>
+    <button class="todo-delete">\u2715</button>
   `;
+
+  updateTodoActions(div, todo);
 
   const input = div.querySelector('.todo-item-input');
 
   // Update todo text on change
   input.addEventListener('input', () => {
     todo.text = input.value;
+    updateTodoActions(div, todo);
     const hint = div.querySelector('.todo-item-hint');
     if (hint) {
       // Create a temporary span to measure text width
@@ -918,6 +962,7 @@ function renderTodoItem(todo) {
         const newItem = renderTodoItem(newTodo);
         div.after(newItem);
         const newInput = newItem.querySelector('.todo-item-input');
+        refreshAllTodoActions();
         resizeTodoPanel();
         newInput.focus();
         newInput.setSelectionRange(0, 0);
@@ -952,6 +997,7 @@ function renderTodoItem(todo) {
         const nextInput = nextItem.querySelector('.todo-item-input');
         nextInput.focus();
       }
+      refreshAllTodoActions();
       resizeTodoPanel();
     }
     // Ctrl+Shift+D: Mark todo as done (remove + add to history)
@@ -994,6 +1040,7 @@ function renderTodoItem(todo) {
     }
     todos = todos.filter(t => t.id !== todo.id);
     div.remove();
+    refreshAllTodoActions();
     resizeTodoPanel();
   });
 
@@ -1010,6 +1057,7 @@ function renderTodoItem(todo) {
   div.addEventListener('dragend', () => {
     div.classList.remove('dragging');
     draggedItem = null;
+    refreshAllTodoActions();
   });
 
   div.addEventListener('dragover', (e) => {
@@ -1043,6 +1091,12 @@ function createEmptyTodo() {
   }
   return item;
 }
+
+// New task button
+document.getElementById('new-task-btn').addEventListener('click', () => {
+  createEmptyTodo();
+  resizeTodoPanel();
+});
 
 // Listen for off-task warning state
 window.acuity.onOffTaskLevel((isOffTask) => {

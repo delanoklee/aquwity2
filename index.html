@@ -21,6 +21,23 @@
         <div id="top-bar">
           <span id="acuity-marker">🔒 AQUWITY 🔒</span>
           <div id="todo-list"></div>
+          <div id="new-task-btn">
+            <span class="new-task-plus">+</span>
+            <span class="new-task-text">New task</span>
+          </div>
+          <div id="todo-footer">
+            <div id="todo-shortcuts">
+              <span>Hold Enter to lock in</span>
+              <span>Shift + Enter new task</span>
+            </div>
+            <div id="settings-menu">
+              <svg id="settings-dots" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <circle cx="4" cy="8" r="1.5" fill="#4e7a8c" />
+                <circle cx="8" cy="8" r="1.5" fill="#4e7a8c" />
+                <circle cx="12" cy="8" r="1.5" fill="#4e7a8c" />
+              </svg>
+            </div>
+          </div>
           <span id="lockedin-task"></span>
           <span id="lockedin-tip">Ctrl+Shift+D to mark complete</span>
           <svg id="hold-progress-ring" width="32" height="32" style="display: none;">
@@ -29,10 +46,9 @@
               stroke-dasharray="81.7" stroke-dashoffset="81.7" stroke-linecap="round"
               transform="rotate(-90 16 16)" />
           </svg>
-          <img src="logo.png" id="logo" alt="Aquwity Logo" />
         </div>
       </div>
-      <div id="logo-dropdown" class="hidden">
+      <div id="settings-dropdown" class="hidden">
         <button id="goal-btn">Goal</button>
         <button id="report-btn">Report</button>
         <button id="history-btn">Dev Testing</button>
