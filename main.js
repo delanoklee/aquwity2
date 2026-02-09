@@ -25,6 +25,7 @@ let interventionWindow = null;
 let completedTasks = [];
 let offTaskCount = 0;
 let taskStartTime = null;
+let isLockedIn = false;
 const focusEnabled = true;
 
 // Auth state
@@ -369,6 +370,22 @@ async function analyzeBatch(buffer) {
 }
 
 // ============================================
+// WINDOW LAYER HELPER
+// ============================================
+function updateWindowLayer() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (isLockedIn && offTaskCount >= 3) {
+    mainWindow.setAlwaysOnTop(true, 'screen-saver');
+    mainWindow.moveTop();
+    mainWindow.focus();
+    mainWindow.webContents.send('off-task-level', true);
+  } else {
+    mainWindow.setAlwaysOnTop(false);
+    mainWindow.webContents.send('off-task-level', false);
+  }
+}
+
+// ============================================
 // PERFORM CHECK
 // ============================================
 async function performCheck() {
@@ -409,22 +426,12 @@ async function performCheck() {
     );
 
     if (result.onTask || isError) {
-      if (offTaskCount > 0) {
-        mainWindow.setAlwaysOnTop(false);
-        mainWindow.webContents.send('off-task-level', false);
-      }
       offTaskCount = 0;
+      updateWindowLayer();
     } else {
       offTaskCount++;
       console.log('Off-task count:', offTaskCount);
-
-      if (offTaskCount === 3) {
-        mainWindow.setAlwaysOnTop(true, 'screen-saver');
-        mainWindow.moveTop();
-        mainWindow.focus();
-        mainWindow.webContents.send('off-task-level', true);
-      }
-
+      updateWindowLayer();
       if (offTaskCount === 90) {
         mainWindow.webContents.send('off-task-fully-red', true);
       }
@@ -473,22 +480,28 @@ ipcMain.handle('get-history', () => {
 
 ipcMain.on('start-tracking', () => {
   taskStartTime = Date.now();
+  isLockedIn = true;
   startTracking();
   updateLockStatus(true);
 });
 
 ipcMain.on('stop-tracking', () => {
   taskStartTime = null;
+  isLockedIn = false;
   stopTracking();
   updateLockStatus(false);
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.setAlwaysOnTop(false);
-    mainWindow.webContents.send('off-task-level', false);
-  }
+  updateWindowLayer();
 });
 
 ipcMain.on('set-focus-enabled', (event, enabled) => {
   console.log('Focus mode is always on (received:', enabled, ')');
+});
+
+ipcMain.on('toggle-locked-in', (event, enabled) => {
+  isLockedIn = enabled;
+  console.log('Locked-in mode:', isLockedIn);
+  updateWindowLayer();
+  updateLockStatus(isLockedIn);
 });
 
 ipcMain.on('resize-window', (event, height) => {
@@ -702,11 +715,9 @@ app.whenReady().then(() => {
 
       mainWindow.webContents.send('task-completed', completedTask);
 
-      if (offTaskCount > 0) {
-        mainWindow.setAlwaysOnTop(false);
-        mainWindow.webContents.send('off-task-level', false);
-      }
+      isLockedIn = false;
       offTaskCount = 0;
+      updateWindowLayer();
       currentTask = '';
       taskStartTime = null;
       updateLockStatus(false);
