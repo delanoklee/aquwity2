@@ -187,15 +187,15 @@ function clearSession() {
 async function updateLockStatus(isLocked) {
   if (!authSession?.user?.id) return;
   try {
-    await fetch('https://clamoycyzwyizqctlhcs.supabase.co/rest/v1/lock_status?user_id=eq.' + authSession.user.id, {
-      method: 'PATCH',
+    await fetch('https://clamoycyzwyizqctlhcs.supabase.co/rest/v1/lock_status', {
+      method: 'POST',
       headers: {
         'apikey': 'sb_publishable_MwdE7DkNUKv6406TmcMt0g_3NnXDh0J',
         'Authorization': 'Bearer ' + authSession.access_token,
         'Content-Type': 'application/json',
-        'Prefer': 'return=representation'
+        'Prefer': 'resolution=merge-duplicates,return=representation'
       },
-      body: JSON.stringify({ is_locked: isLocked, updated_at: new Date().toISOString() })
+      body: JSON.stringify({ user_id: authSession.user.id, is_locked: isLocked, updated_at: new Date().toISOString() })
     });
   } catch (err) {
     console.error('lock_status update failed:', err.message);
