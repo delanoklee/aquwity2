@@ -134,12 +134,41 @@ function loadSession() {
   try {
     if (fs.existsSync(authPath)) {
       authSession = JSON.parse(fs.readFileSync(authPath, 'utf8'));
+      console.log('[AUTH] Session loaded from disk for user:', authSession?.user?.id);
       return true;
     }
   } catch (e) {
     authSession = null;
   }
   return false;
+}
+
+async function refreshSession() {
+  if (!authSession?.refresh_token) return false;
+  console.log('[AUTH] Attempting token refresh...');
+  try {
+    const response = await fetch('https://clamoycyzwyizqctlhcs.supabase.co/auth/v1/token?grant_type=refresh_token', {
+      method: 'POST',
+      headers: {
+        'apikey': 'sb_publishable_MwdE7DkNUKv6406TmcMt0g_3NnXDh0J',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ refresh_token: authSession.refresh_token }),
+    });
+    if (!response.ok) {
+      console.log('[AUTH] Refresh failed, status:', response.status);
+      return false;
+    }
+    const data = await response.json();
+    authSession.access_token = data.access_token;
+    authSession.refresh_token = data.refresh_token;
+    saveSession(authSession);
+    console.log('[AUTH] Refresh succeeded, new tokens saved');
+    return true;
+  } catch (err) {
+    console.log('[AUTH] Refresh failed:', err.message);
+    return false;
+  }
 }
 
 function saveSession(session) {
@@ -188,9 +217,20 @@ async function apiFetch(endpoint, options = {}) {
 
   const response = await fetch(url, { ...options, headers });
 
-  // If token expired, prompt re-login
+  // If token expired, try refreshing before forcing re-login
   if (response.status === 401) {
-    console.log('Token expired, clearing session...');
+    console.log('[AUTH] Got 401, attempting refresh...');
+    const refreshed = await refreshSession();
+    if (refreshed) {
+      // Retry the request with the new token
+      const retryHeaders = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authSession.access_token}`,
+        ...options.headers,
+      };
+      return await fetch(url, { ...options, headers: retryHeaders });
+    }
+    console.log('[AUTH] Refresh failed, clearing session');
     clearSession();
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.close();
@@ -616,10 +656,17 @@ app.whenReady().then(() => {
   ]);
   Menu.setApplicationMenu(menu);
 
-  // Check for existing session
+  // Check for existing session and refresh token on launch
   if (loadSession()) {
-    console.log('Found saved session, opening main window...');
-    createWindow();
+    console.log('Found saved session, refreshing token...');
+    refreshSession().then(refreshed => {
+      if (refreshed) {
+        console.log('[AUTH] Token refreshed on launch, opening main window');
+      } else {
+        console.log('[AUTH] Token refresh failed on launch, using existing token');
+      }
+      createWindow();
+    });
   } else {
     console.log('No session found, showing splash...');
     showSplashWindow();
