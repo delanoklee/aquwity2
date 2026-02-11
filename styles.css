@@ -189,6 +189,7 @@ body {
   transform: translate(-50%, -50%);
   z-index: 10;
   pointer-events: none;
+  display: none;
 }
 
 #hold-progress-circle {
@@ -1046,6 +1047,7 @@ button:active {
 }
 
 .tooltip-hint {
+  display: none;
   position: absolute;
   bottom: calc(100% + 6px);
   left: 0;
@@ -1057,29 +1059,32 @@ button:active {
   border-radius: 4px;
   padding: 3px 8px;
   white-space: nowrap;
-  opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s ease;
 }
 
-#new-task-btn:hover .tooltip-hint,
-.todo-lock-in:hover .tooltip-hint {
-  opacity: 1;
+#new-task-btn:hover .tooltip-hint {
+  display: block;
 }
 
-.todo-lock-in .tooltip-hint {
-  left: 50%;
-  transform: translateX(-50%);
+#lockin-tooltip {
+  position: fixed;
+  display: none;
+  white-space: nowrap;
+  width: auto;
+  z-index: 9999;
 }
 
 #settings-menu {
   -webkit-app-region: no-drag;
+  margin-right: 12px;
 }
 
 #settings-dots {
   cursor: pointer;
   opacity: 0.55;
   transition: opacity 0.25s;
+  width: 19px;
+  height: 19px;
 }
 
 #settings-dots:hover {
@@ -1105,8 +1110,9 @@ button:active {
 }
 
 .new-task-plus {
-  font-size: 15px;
+  font-size: 19px;
   color: rgba(78, 122, 140, 0.55);
+  margin-left: 12px;
   font-weight: 300;
   width: 18px;
   text-align: center;
@@ -1130,7 +1136,7 @@ button:active {
   gap: 6px;
   padding: 4px 10px;
   border-radius: 6px;
-  background: rgba(78, 122, 140, 0.06);
+  background: #4e7a8c;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   flex-shrink: 0;
@@ -1138,7 +1144,6 @@ button:active {
 }
 
 .todo-lock-in:hover {
-  background: #4e7a8c;
   transform: scale(1.04);
   box-shadow: 0 4px 16px rgba(78, 122, 140, 0.2);
 }
@@ -1147,19 +1152,14 @@ button:active {
   font-size: 11px;
   font-weight: 600;
   font-family: 'DM Sans', sans-serif;
-  color: rgba(78, 122, 140, 0.5);
+  color: #f0e2c4;
   letter-spacing: 0.3px;
   white-space: nowrap;
-  transition: color 0.2s ease;
-}
-
-.todo-lock-in:hover .todo-lock-in-text {
-  color: #f0e2c4;
 }
 
 .todo-lock-in-arrow {
   font-size: 11px;
-  color: rgba(78, 122, 140, 0.25);
+  color: #f0e2c4;
   transition: all 0.25s ease;
 }
 

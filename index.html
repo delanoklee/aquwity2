@@ -31,16 +31,15 @@
             </div>
             <div id="settings-menu">
               <svg id="settings-dots" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <circle cx="4" cy="8" r="1.5" fill="#4e7a8c" />
-                <circle cx="8" cy="8" r="1.5" fill="#4e7a8c" />
-                <circle cx="12" cy="8" r="1.5" fill="#4e7a8c" />
+                <path d="M8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" fill="#4e7a8c"/>
+                <path d="M13.3 6.5h-.7a.5.5 0 0 1-.46-.3l-.04-.1a.5.5 0 0 1 .1-.55l.5-.5a.7.7 0 0 0 0-1l-.7-.7a.7.7 0 0 0-1 0l-.5.5a.5.5 0 0 1-.55.1l-.1-.04a.5.5 0 0 1-.3-.46v-.7a.7.7 0 0 0-.7-.7h-1a.7.7 0 0 0-.7.7v.7a.5.5 0 0 1-.3.46l-.1.04a.5.5 0 0 1-.55-.1l-.5-.5a.7.7 0 0 0-1 0l-.7.7a.7.7 0 0 0 0 1l.5.5a.5.5 0 0 1 .1.55l-.04.1a.5.5 0 0 1-.46.3h-.7a.7.7 0 0 0-.7.7v1a.7.7 0 0 0 .7.7h.7a.5.5 0 0 1 .46.3l.04.1a.5.5 0 0 1-.1.55l-.5.5a.7.7 0 0 0 0 1l.7.7a.7.7 0 0 0 1 0l.5-.5a.5.5 0 0 1 .55-.1l.1.04a.5.5 0 0 1 .3.46v.7a.7.7 0 0 0 .7.7h1a.7.7 0 0 0 .7-.7v-.7a.5.5 0 0 1 .3-.46l.1-.04a.5.5 0 0 1 .55.1l.5.5a.7.7 0 0 0 1 0l.7-.7a.7.7 0 0 0 0-1l-.5-.5a.5.5 0 0 1-.1-.55l.04-.1a.5.5 0 0 1 .46-.3h.7a.7.7 0 0 0 .7-.7v-1a.7.7 0 0 0-.7-.7z" stroke="#4e7a8c" stroke-width=".75" fill="none"/>
               </svg>
             </div>
           </div>
           <span id="lockedin-task"></span>
           <div id="locked-hints">
-            <button id="lockedin-exit-btn">Exit</button>
-            <button id="lockedin-complete-btn">Done</button>
+            <button id="lockedin-exit-btn">Go back to list</button>
+            <button id="lockedin-complete-btn">Mark as done</button>
           </div>
           <svg id="hold-progress-ring" width="32" height="32" style="display: none;">
             <circle cx="16" cy="16" r="13" stroke="rgba(78,122,140,0.15)" stroke-width="2" fill="none" />
@@ -82,6 +81,7 @@
         </div>
       </div>
     </div>
+    <span id="lockin-tooltip" class="tooltip-hint">Hold Enter</span>
     <script src="renderer.js"></script>
   </body>
 </html>

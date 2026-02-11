@@ -899,8 +899,17 @@ function updateTodoActions(div, todo) {
     lockInBtn.innerHTML = `
       <span class="todo-lock-in-text">Lock in</span>
       <span class="todo-lock-in-arrow">\u2192</span>
-      <span class="tooltip-hint">Hold Enter</span>
     `;
+    const lockinTooltip = document.getElementById('lockin-tooltip');
+    lockInBtn.addEventListener('mouseenter', () => {
+      const rect = lockInBtn.getBoundingClientRect();
+      lockinTooltip.style.display = 'block';
+      lockinTooltip.style.left = (rect.left + rect.width / 2 - lockinTooltip.offsetWidth / 2) + 'px';
+      lockinTooltip.style.top = (rect.bottom + 6) + 'px';
+    });
+    lockInBtn.addEventListener('mouseleave', () => {
+      lockinTooltip.style.display = 'none';
+    });
     lockInBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       if (todo.text.trim()) {
