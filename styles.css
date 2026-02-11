@@ -226,6 +226,30 @@ body {
   display: block;
 }
 
+/* ── Locked-in action buttons ── */
+#lockedin-exit-btn,
+#lockedin-complete-btn {
+  border: 1px solid rgba(78, 122, 140, 0.9);
+  border-radius: 4px;
+  background: rgba(78, 122, 140, 0.25);
+  color: #7ab0c4;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  -webkit-app-region: no-drag;
+}
+
+#lockedin-exit-btn:hover,
+#lockedin-complete-btn:hover {
+  color: #e8dcc4;
+  border-color: #4e7a8c;
+  background: rgba(78, 122, 140, 0.45);
+}
+
 /* ── Hints bar ── */
 #locked-hints {
   display: none;
@@ -234,7 +258,7 @@ body {
   width: 100%;
   margin-top: 16px;
   padding-top: 10px;
-  border-top: 1px solid rgba(240, 226, 196, 0.06);
+  border-top: 1px solid rgba(240, 226, 196, 0.15);
 }
 
 #top-bar.locked-in #locked-hints {
@@ -244,7 +268,7 @@ body {
 .locked-hint {
   font-size: 9px;
   font-family: 'DM Sans', sans-serif;
-  color: rgba(240, 226, 196, 0.15);
+  color: rgba(240, 226, 196, 0.28);
   letter-spacing: 0.3px;
   -webkit-app-region: no-drag;
 }
@@ -253,8 +277,8 @@ body {
   display: inline-block;
   padding: 1px 4px;
   border-radius: 3px;
-  background: rgba(240, 226, 196, 0.05);
-  border: 1px solid rgba(240, 226, 196, 0.06);
+  background: rgba(240, 226, 196, 0.11);
+  border: 1px solid rgba(240, 226, 196, 0.13);
   font-size: 8px;
   font-family: 'DM Sans', sans-serif;
   margin-right: 3px;
@@ -468,9 +492,13 @@ button:active {
   display: flex;
   flex-direction: column;
   padding-bottom: 4px;
-  overflow: hidden;
+  overflow-y: auto;
   -webkit-app-region: no-drag;
 }
+
+#todo-list::-webkit-scrollbar { width: 4px; }
+#todo-list::-webkit-scrollbar-thumb { background: rgba(44, 62, 71, 0.2); border-radius: 2px; }
+#todo-list::-webkit-scrollbar-track { background: transparent; }
 
 .todo-item {
   display: flex;
@@ -481,8 +509,7 @@ button:active {
   border-radius: 0;
   color: #2c3e47;
   transition: background 0.2s, padding 0.15s;
-  flex-shrink: 1;
-  min-height: 0;
+  flex-shrink: 0;
   overflow: hidden;
   border-bottom: 1px solid rgba(61, 90, 107, 0.08);
 }
@@ -522,7 +549,7 @@ button:active {
 }
 
 .todo-item-input::placeholder {
-  color: rgba(78, 122, 140, 0.3);
+  color: rgba(78, 122, 140, 0.5);
   font-style: italic;
 }
 
@@ -556,7 +583,7 @@ button:active {
 }
 
 .todo-drag-handle {
-  color: rgba(78, 122, 140, 0.2);
+  color: rgba(78, 122, 140, 0.55);
   font-size: 14px;
   cursor: grab;
   flex-shrink: 0;
@@ -565,7 +592,7 @@ button:active {
 }
 
 .todo-drag-handle:hover {
-  color: rgba(78, 122, 140, 0.45);
+  color: rgba(78, 122, 140, 0.75);
 }
 
 .todo-item.dragging {
@@ -626,7 +653,7 @@ button:active {
 }
 
 #goal-panel-input::placeholder {
-  color: rgba(78, 122, 140, 0.3);
+  color: rgba(78, 122, 140, 0.5);
   font-style: italic;
 }
 
@@ -644,7 +671,7 @@ button:active {
   right: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: rgba(78, 122, 140, 0.25);
+  color: rgba(78, 122, 140, 0.42);
   font-size: 10px;
   font-family: 'DM Sans', sans-serif;
   font-style: normal;
@@ -675,7 +702,7 @@ button:active {
 }
 
 #goal-bar #goal-input::placeholder {
-  color: rgba(240, 226, 196, 0.4);
+  color: rgba(240, 226, 196, 0.55);
 }
 
 #goal-bar #goal-input.hidden {
@@ -770,7 +797,7 @@ button:active {
 }
 
 .report-empty-hint {
-  color: rgba(240, 226, 196, 0.25);
+  color: rgba(240, 226, 196, 0.42);
   font-size: 12px;
   font-family: 'DM Sans', sans-serif;
   text-align: center;
@@ -1007,17 +1034,42 @@ button:active {
   align-items: center;
   margin-top: 4px;
   padding-top: 8px;
-  border-top: 1px solid rgba(78, 122, 140, 0.06);
+  border-top: 1px solid rgba(78, 122, 140, 0.15);
   -webkit-app-region: no-drag;
 }
 
-#todo-shortcuts {
-  display: flex;
-  gap: 16px;
+/* ── Hover tooltip hints ── */
+
+#new-task-btn,
+.todo-lock-in {
+  position: relative;
+}
+
+.tooltip-hint {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
   font-size: 10px;
-  font-family: Georgia, serif;
-  color: rgba(78, 122, 140, 0.18);
-  font-weight: 500;
+  font-family: 'DM Sans', sans-serif;
+  color: rgba(240, 226, 196, 0.7);
+  background: #1a2a30;
+  border: 1px solid rgba(78, 122, 140, 0.3);
+  border-radius: 4px;
+  padding: 3px 8px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+#new-task-btn:hover .tooltip-hint,
+.todo-lock-in:hover .tooltip-hint {
+  opacity: 1;
+}
+
+.todo-lock-in .tooltip-hint {
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 #settings-menu {
@@ -1026,12 +1078,12 @@ button:active {
 
 #settings-dots {
   cursor: pointer;
-  opacity: 0.15;
+  opacity: 0.55;
   transition: opacity 0.25s;
 }
 
 #settings-dots:hover {
-  opacity: 0.4;
+  opacity: 0.75;
 }
 
 /* ── New Task Button ── */
@@ -1039,10 +1091,7 @@ button:active {
 #new-task-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 0;
   cursor: pointer;
-  border-top: 1px solid rgba(78, 122, 140, 0.06);
   -webkit-app-region: no-drag;
 }
 
@@ -1057,7 +1106,7 @@ button:active {
 
 .new-task-plus {
   font-size: 15px;
-  color: rgba(78, 122, 140, 0.2);
+  color: rgba(78, 122, 140, 0.55);
   font-weight: 300;
   width: 18px;
   text-align: center;

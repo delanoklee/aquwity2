@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('acuity', {
   resizeWindow: (height) => ipcRenderer.send('resize-window', height),
   getCompletedTasks: () => ipcRenderer.invoke('get-completed-tasks'),
   completeTodo: (text, duration) => ipcRenderer.invoke('complete-todo', text, duration),
+  bringToFront: () => ipcRenderer.send('bring-to-front'),
   categorizeActivities: (activities) => ipcRenderer.invoke('categorize-activities', activities),
 
   // Auth

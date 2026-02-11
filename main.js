@@ -514,6 +514,19 @@ ipcMain.on('resize-window', (event, height) => {
   }
 });
 
+ipcMain.on('bring-to-front', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.setAlwaysOnTop(true, 'screen-saver');
+    mainWindow.moveTop();
+    mainWindow.focus();
+    setTimeout(() => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.setAlwaysOnTop(false);
+      }
+    }, 200);
+  }
+});
+
 // Completed tasks - saves to backend
 ipcMain.handle('get-completed-tasks', async () => {
   try {

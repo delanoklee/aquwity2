@@ -287,6 +287,47 @@ document.addEventListener('keyup', (e) => {
   }
 });
 
+// Complete the current locked-in task
+function completeLockedInTask() {
+  todoListShownInLockedIn = false;
+  topBar.classList.remove('show-todos');
+
+  const currentTaskText = todos[0]?.text?.trim();
+  if (currentTaskText) {
+    const duration = taskStartTime ? Date.now() - taskStartTime : null;
+    window.acuity.completeTodo(currentTaskText, duration).then(() => {
+      if (todos.length > 1) {
+        const completedTodo = todos.shift();
+        const todoElement = todoList.querySelector(`[data-id="${completedTodo.id}"]`);
+        if (todoElement) todoElement.remove();
+
+        const nextTodo = todos[0];
+        window.acuity.setTask(nextTodo.text);
+        lockedinTask.textContent = nextTodo.text;
+        taskStartTime = Date.now();
+      } else {
+        exitLockedInMode();
+        todos = [];
+        todoList.innerHTML = '';
+        createEmptyTodo();
+      }
+      todoList.scrollTop = 0;
+      window.acuity.bringToFront();
+      updateTodoVisibility();
+    });
+  }
+}
+
+// Complete button in locked-in mode
+document.getElementById('lockedin-complete-btn').addEventListener('click', () => {
+  if (isLockedIn) completeLockedInTask();
+});
+
+// Exit button in locked-in mode
+document.getElementById('lockedin-exit-btn').addEventListener('click', () => {
+  if (isLockedIn) exitLockedInMode();
+});
+
 // Ctrl+Shift+D in locked-in mode - two-step process
 // First press: Show todo list. Second press: Complete the task
 document.addEventListener('keydown', (e) => {
@@ -302,35 +343,7 @@ document.addEventListener('keydown', (e) => {
       // Resize window to fit todo list
       resizeTodoPanel();
     } else {
-      // Second press: Complete the task
-      todoListShownInLockedIn = false;
-      topBar.classList.remove('show-todos');
-
-      // Manually complete the current task
-      const currentTaskText = todos[0]?.text?.trim();
-      if (currentTaskText) {
-        const duration = taskStartTime ? Date.now() - taskStartTime : null;
-        window.acuity.completeTodo(currentTaskText, duration).then(() => {
-          // Trigger the same logic as onTaskCompleted
-          if (todos.length > 1) {
-            const completedTodo = todos.shift();
-            const todoElement = todoList.querySelector(`[data-id="${completedTodo.id}"]`);
-            if (todoElement) todoElement.remove();
-
-            const nextTodo = todos[0];
-            window.acuity.setTask(nextTodo.text);
-            lockedinTask.textContent = nextTodo.text;
-            taskStartTime = Date.now();  // Reset start time for next task
-          } else {
-            // Exit locked-in mode
-            exitLockedInMode();
-            todos = [];
-            todoList.innerHTML = '';
-            createEmptyTodo();
-          }
-          updateTodoVisibility();
-        });
-      }
+      completeLockedInTask();
     }
   }
 });
@@ -350,6 +363,7 @@ function exitLockedInMode() {
   // Clear locked-in task display
   lockedinTask.textContent = '';
   document.getElementById('locked-status-label').textContent = 'Focused';
+  refreshAllTodoActions();
   updateTodoVisibility();
   // Focus the first todo input
   const firstInput = todoList.querySelector('.todo-item-input');
@@ -749,6 +763,8 @@ window.acuity.onTaskCompleted((result) => {
     const nextTask = nextTodo.text;
     topBar.classList.remove('off-task-warning');
     topBar.classList.remove('fully-red');
+    todoList.scrollTop = 0;
+    window.acuity.bringToFront();
     enterLockedInMode(nextTask);
   } else {
     // No next todo or only one - exit locked-in mode and create new empty todo
@@ -838,13 +854,22 @@ function addHistoryItem(item) {
 
 // Calculate and resize window to fit inline todo items in top bar
 function resizeTodoPanel() {
-  const maxWindowHeight = 400;
+  const maxWindowHeight = window.screen.availHeight - 40;
+
+  // Reset max-height so shrinking is possible when tasks are removed
+  todoList.style.maxHeight = '';
 
   // Measure actual heights from DOM
   const goalBarHeight = goalBar.classList.contains('hidden') ? 0 : goalBar.offsetHeight;
   const topBarHeight = topBar.offsetHeight;
 
   const totalHeight = goalBarHeight + topBarHeight;
+
+  if (totalHeight > maxWindowHeight) {
+    // Compute how much space the list can use within the capped window
+    const nonListHeight = totalHeight - todoList.offsetHeight;
+    todoList.style.maxHeight = (maxWindowHeight - nonListHeight) + 'px';
+  }
 
   window.acuity.resizeWindow(Math.min(totalHeight, maxWindowHeight));
 }
@@ -874,6 +899,7 @@ function updateTodoActions(div, todo) {
     lockInBtn.innerHTML = `
       <span class="todo-lock-in-text">Lock in</span>
       <span class="todo-lock-in-arrow">\u2192</span>
+      <span class="tooltip-hint">Hold Enter</span>
     `;
     lockInBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1009,6 +1035,9 @@ function renderTodoItem(todo) {
       if (todos.length === 0) {
         createEmptyTodo();
       }
+      refreshAllTodoActions();
+      todoList.scrollTop = 0;
+      window.acuity.bringToFront();
       resizeTodoPanel();
     }
   });

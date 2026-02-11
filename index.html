@@ -24,14 +24,10 @@
             <span id="locked-status-label">Focused</span>
           </div>
           <div id="todo-list"></div>
-          <div id="new-task-btn">
-            <span class="new-task-plus">+</span>
-            <span class="new-task-text">New task</span>
-          </div>
           <div id="todo-footer">
-            <div id="todo-shortcuts">
-              <span>Hold Enter to lock in</span>
-              <span>Shift + Enter new task</span>
+            <div id="new-task-btn">
+              <span class="new-task-plus">+</span>
+              <span class="tooltip-hint">Shift + Enter</span>
             </div>
             <div id="settings-menu">
               <svg id="settings-dots" width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -43,8 +39,8 @@
           </div>
           <span id="lockedin-task"></span>
           <div id="locked-hints">
-            <span class="locked-hint"><span class="hint-key">⌫</span> hold to exit</span>
-            <span class="locked-hint"><span class="hint-key">⌃⇧D</span> complete</span>
+            <button id="lockedin-exit-btn">Exit</button>
+            <button id="lockedin-complete-btn">Done</button>
           </div>
           <svg id="hold-progress-ring" width="32" height="32" style="display: none;">
             <circle cx="16" cy="16" r="13" stroke="rgba(78,122,140,0.15)" stroke-width="2" fill="none" />
